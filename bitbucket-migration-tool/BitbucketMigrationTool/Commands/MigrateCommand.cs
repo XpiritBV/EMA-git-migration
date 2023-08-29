@@ -1,4 +1,5 @@
 ﻿using BitbucketMigrationTool.Models;
+using BitbucketMigrationTool.Services;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -11,17 +12,31 @@ namespace BitbucketMigrationTool.Commands
     {
         private readonly ILogger logger;
         private readonly AppSettings appSettings;
+        private readonly BitbucketClient bitbucketClient;
 
-        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions)
+        [Option("-p|--project", CommandOptionType.SingleValue, Description = "Project key")]
+        public string Project { get; set; }
+
+        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient)
         {
             this.logger = logger;
             this.appSettings = appSettingsOptions.Value;
+            this.bitbucketClient = bitbucketClient;
         }
 
-        private Task<int> OnExecute(CommandLineApplication app)
+        private async Task<int> OnExecute(CommandLineApplication app)
         {
-            logger.LogInformation("Migrate command executed");
-            return Task.FromResult(0);
+            var repositories = await bitbucketClient.GetRepositoriesAsync(Project);
+            foreach (var repository in repositories)
+            {
+                logger.LogInformation($"Found repository {repository.Name}");
+                var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
+                foreach (var branch in branches)
+                {
+                    logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
+                }
+            }
+            return 0;
         }
 
         private string GetVersion() => appSettings.AppVersion;
