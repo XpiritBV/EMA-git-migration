@@ -1,4 +1,4 @@
-﻿namespace BitbucketMigrationTool.Models.Bitbucket
+﻿namespace BitbucketMigrationTool.Models.Bitbucket.General
 {
     internal class PagedResult<T>
     {

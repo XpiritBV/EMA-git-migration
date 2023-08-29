@@ -1,6 +1,8 @@
-﻿namespace BitbucketMigrationTool.Models.Bitbucket
+﻿using BitbucketMigrationTool.Models.Bitbucket.General;
+
+namespace BitbucketMigrationTool.Models.Bitbucket.Repository
 {
-    public class Repository
+    public class Repo
     {
         public string Slug { get; set; }
         public int Id { get; set; }

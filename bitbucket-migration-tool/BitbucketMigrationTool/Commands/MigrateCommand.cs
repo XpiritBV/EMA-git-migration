@@ -35,6 +35,12 @@ namespace BitbucketMigrationTool.Commands
                 {
                     logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
                 }
+
+                var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
+                foreach (var pullRequest in pullRequests)
+                {
+                    logger.LogInformation($"\t-> Found pull request {pullRequest.Title}");
+                }
             }
             return 0;
         }
