@@ -1,6 +1,10 @@
-﻿using BitbucketMigrationTool.Models.Bitbucket;
+﻿using BitbucketMigrationTool.Models.Bitbucket.General;
+using BitbucketMigrationTool.Models.Bitbucket.PullRequest;
+using BitbucketMigrationTool.Models.Bitbucket.Repository;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace BitbucketMigrationTool.Services
 {
@@ -16,11 +20,14 @@ namespace BitbucketMigrationTool.Services
         }
 
 
-        public Task<IEnumerable<Repository>> GetRepositoriesAsync(string projectKey)
-            => GetPagedResultAsync<Repository>($"projects/{projectKey}/repos");
+        public Task<IEnumerable<Repo>> GetRepositoriesAsync(string projectKey)
+            => GetPagedResultAsync<Repo>($"projects/{projectKey}/repos");
 
         public Task<IEnumerable<Branch>> GetBranchesAsync(string projectKey, string repositorySlug)
             => GetPagedResultAsync<Branch>($"projects/{projectKey}/repos/{repositorySlug}/branches");
+
+        public Task<IEnumerable<PullRequest>> GetPullRequests(string projectKey, string repositorySlug)
+            => GetPagedResultAsync<PullRequest>($"projects/{projectKey}/repos/{repositorySlug}/pull-requests");
 
         private async Task<IEnumerable<T>> GetPagedResultAsync<T>(string url)
         {
@@ -34,7 +41,11 @@ namespace BitbucketMigrationTool.Services
             {
                 do
                 {
-                    pagedResult = await httpClient.GetFromJsonAsync<PagedResult<T>>(pagedUrl());
+                    var response = await httpClient.GetAsync(pagedUrl());
+                    var body = await response.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+                    options.Converters.Add(new JsonStringEnumConverter());
+                    pagedResult = JsonSerializer.Deserialize<PagedResult<T>>(body, options);
                     result.AddRange(pagedResult.Values);
                     start = pagedResult.NextPageStart ?? 0;
                 } while (!pagedResult.IsLastPage);
