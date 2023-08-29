@@ -36,7 +36,9 @@ var builder = new HostBuilder()
 
             services.AddHttpClient<BitbucketClient>(client =>
             {
-                client.BaseAddress = new Uri(configuration.GetConnectionString("source"));
+                var bitbucketConfig = configuration.GetSection("Bitbucket").Get<BitbucketConfig>();
+                client.BaseAddress = new Uri($"{bitbucketConfig.Url}/rest/api/{bitbucketConfig.ApiVersion}/");
+                client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bitbucketConfig.Key}");
             });
         });
 
