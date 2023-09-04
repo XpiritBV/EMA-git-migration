@@ -8,7 +8,8 @@
 		<RuntimeIdentifier>win7-x64</RuntimeIdentifier>
 		<LangVersion>latest</LangVersion>
 		<AssemblyName>bitbucketmigrationtool</AssemblyName>
-	</PropertyGroup>
+	  <UserSecretsId>0244a984-9ca1-478a-be0b-8de81c9a70cb</UserSecretsId>
+  </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="McMaster.Extensions.CommandLineUtils" Version="4.0.2" />
