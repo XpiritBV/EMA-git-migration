@@ -1,6 +1,6 @@
 ﻿namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
 {
-    public enum PullRequestState
+    public enum State
     {
         DECLINED,
         MERGED,

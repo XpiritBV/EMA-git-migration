@@ -2,11 +2,11 @@
 
 namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
 {
-    public class PullRequestParticipant
+    public class Participant
     {
         public User User { get; set; }
-        public PullRequestParticipantRole Role { get; set; }
-        public PullRequestParticipantStatus Status { get; set; }
+        public ParticipantRole Role { get; set; }
+        public ParticipantStatus Status { get; set; }
         public string LastReviewedCommit { get; set; }
         public bool Approved { get; set; }
     }

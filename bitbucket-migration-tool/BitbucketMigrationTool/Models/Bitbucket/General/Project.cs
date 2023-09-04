@@ -1,4 +1,6 @@
-﻿namespace BitbucketMigrationTool.Models.Bitbucket.General
+﻿using BitbucketMigrationTool.Models.Markdown;
+
+namespace BitbucketMigrationTool.Models.Bitbucket.General
 {
     public class Project
     {
