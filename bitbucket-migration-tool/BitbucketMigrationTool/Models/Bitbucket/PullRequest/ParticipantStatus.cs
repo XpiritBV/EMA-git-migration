@@ -1,6 +1,6 @@
 ﻿namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
 {
-    public enum PullRequestParticipantStatus
+    public enum ParticipantStatus
     {
         UNAPPROVED,
         APPROVED,

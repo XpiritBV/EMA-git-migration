@@ -15,5 +15,6 @@ namespace BitbucketMigrationTool.Models.Bitbucket.Repository
         public Project Project { get; set; }
         public bool Public { get; set; }
         public bool Archived { get; set; }
+        public RepoLinks Links { get; set; }
     }
 }

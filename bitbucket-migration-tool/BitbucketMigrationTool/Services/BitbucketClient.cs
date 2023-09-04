@@ -19,15 +19,20 @@ namespace BitbucketMigrationTool.Services
             this.httpClient = httpClient;
         }
 
-
         public Task<IEnumerable<Repo>> GetRepositoriesAsync(string projectKey)
             => GetPagedResultAsync<Repo>($"projects/{projectKey}/repos");
 
         public Task<IEnumerable<Branch>> GetBranchesAsync(string projectKey, string repositorySlug)
             => GetPagedResultAsync<Branch>($"projects/{projectKey}/repos/{repositorySlug}/branches");
 
-        public Task<IEnumerable<PullRequest>> GetPullRequests(string projectKey, string repositorySlug)
-            => GetPagedResultAsync<PullRequest>($"projects/{projectKey}/repos/{repositorySlug}/pull-requests");
+        public Task<IEnumerable<PR>> GetPullRequests(string projectKey, string repositorySlug)
+            => GetPagedResultAsync<PR>($"projects/{projectKey}/repos/{repositorySlug}/pull-requests");
+
+        public Task<IEnumerable<Activity>> GetPullRequestActivities(string projectKey, string repositorySlug, int pullRequestId)
+            => GetPagedResultAsync<Activity>($"projects/{projectKey}/repos/{repositorySlug}/pull-requests/{pullRequestId}/activities");
+
+        public Task<Stream> GetAttachment(string projectKey, string repositorySlug, int attachmentId)
+            => httpClient.GetStreamAsync($"projects/{projectKey}/repos/{repositorySlug}/attachments/{attachmentId}");
 
         private async Task<IEnumerable<T>> GetPagedResultAsync<T>(string url)
         {

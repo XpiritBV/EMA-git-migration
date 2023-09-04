@@ -1,6 +1,6 @@
 ﻿namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
 {
-    public enum PullRequestParticipantRole
+    public enum ParticipantRole
     {
         AUTHOR,
         REVIEWER,
