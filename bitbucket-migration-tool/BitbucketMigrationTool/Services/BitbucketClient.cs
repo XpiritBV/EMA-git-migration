@@ -19,6 +19,9 @@ namespace BitbucketMigrationTool.Services
             this.httpClient = httpClient;
         }
 
+        public Task<IEnumerable<Project>> GetProjectsAsync()
+            => GetPagedResultAsync<Project>($"projects");
+
         public Task<IEnumerable<Repo>> GetRepositoriesAsync(string projectKey)
             => GetPagedResultAsync<Repo>($"projects/{projectKey}/repos");
 
@@ -48,6 +51,9 @@ namespace BitbucketMigrationTool.Services
                 {
                     var response = await httpClient.GetAsync(pagedUrl());
                     var body = await response.Content.ReadAsStringAsync();
+
+                    //logger.LogDebug(body);
+
                     var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
                     options.Converters.Add(new JsonStringEnumConverter());
                     pagedResult = JsonSerializer.Deserialize<PagedResult<T>>(body, options);

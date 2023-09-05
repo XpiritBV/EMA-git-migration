@@ -1,8 +1,7 @@
 {
   "profiles": {
     "BitbucketMigrationTool": {
-      "commandName": "Project",
-      "commandLineArgs": "-p MIG"
+      "commandName": "Project"
     }
   }
 }
