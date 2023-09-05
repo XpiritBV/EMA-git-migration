@@ -12,20 +12,14 @@ namespace BitbucketMigrationTool.Commands
 {
     [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
     [VersionOptionFromMember("--version", MemberName = nameof(GetVersion))]
-    internal class MigrateCommand
+    internal class MigrateCommand : CommandBase
     {
-        private readonly ILogger logger;
-        private readonly AppSettings appSettings;
-        private readonly BitbucketClient bitbucketClient;
 
         [Option("-p|--project", CommandOptionType.SingleValue, Description = "Project key")]
         public string Project { get; set; }
 
-        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient)
+        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient) :base(logger,appSettingsOptions, bitbucketClient)
         {
-            this.logger = logger;
-            this.appSettings = appSettingsOptions.Value;
-            this.bitbucketClient = bitbucketClient;
         }
 
         private async Task<int> OnExecute(CommandLineApplication app)
@@ -69,7 +63,7 @@ namespace BitbucketMigrationTool.Commands
             return 0;
         }
 
-        private string GetVersion() => appSettings.AppVersion;
+        
 
         private IEnumerable<MarkdownLink> ScanForLinks(string text)
         {
@@ -79,35 +73,6 @@ namespace BitbucketMigrationTool.Commands
             {
                 yield return new MarkdownLink(match.Groups["text"].Value, match.Groups["url"].Value);
             }
-        }
-
-        private Task GitAction(string args,string workingdir = "")
-        {
-            var cloneProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = args,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            if (!string.IsNullOrWhiteSpace(workingdir)) 
-            {
-                cloneProcess.StartInfo.WorkingDirectory = workingdir;
-            }
-
-            cloneProcess.OutputDataReceived += (sender, args) => logger.LogInformation(args.Data);
-            cloneProcess.ErrorDataReceived += (sender, args) => logger.LogError(args.Data);
-
-            cloneProcess.Start();
-            cloneProcess.BeginOutputReadLine();
-            cloneProcess.BeginErrorReadLine();
-            return cloneProcess.WaitForExitAsync();
         }
     }
 }
