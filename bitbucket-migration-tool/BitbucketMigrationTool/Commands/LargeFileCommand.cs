@@ -32,7 +32,13 @@ namespace BitbucketMigrationTool.Commands
         {
             logger.LogInformation("Start");
 
-            File.Delete("largefile.csv");
+            const string largeFileName = "largefile.csv";
+            const string reportName = "report.csv";
+            const string workingFolder = "tempdir";
+
+            File.Delete(largeFileName);
+            File.Delete(reportName);
+
 
             // Loop over all projects
             var projects = await bitbucketClient.GetProjectsAsync();
@@ -45,15 +51,8 @@ namespace BitbucketMigrationTool.Commands
                 foreach (var repository in repositories)
                 {
                     logger.LogInformation($"Repository: {repository.Slug}");
-                    //try
-                    //{
-                    //    Directory.Delete("tempdir", true);
-                    //}
-                    //catch (Exception)
-                    //{
-                    //}
 
-                    await GitAction($"clone {repository.Links.Clone.First(x => x.Name == "http").Href} tempdir");
+                    await GitAction($"clone {repository.Links.Clone.First(x => x.Name == "http").Href} {workingFolder}");
 
                     var branches = await bitbucketClient.GetBranchesAsync(project.Key, repository.Slug);
                     foreach (var branch in branches)
@@ -61,16 +60,18 @@ namespace BitbucketMigrationTool.Commands
                         logger.LogInformation($"Branch: {branch.DisplayId}");
 
                         // pull all branches
-                        await GitAction($"checkout {branch.DisplayId}", "tempdir");
+                        await GitAction($"checkout {branch.DisplayId}", workingFolder);
 
                         // check for large files
                         // report project, repository, branch, file, size
-                        await ListFiles("tempdir", project.Key, repository.Slug, branch.DisplayId, Size);
+                        await ListFiles(workingFolder, project.Key, repository.Slug, branch.DisplayId, Size, largeFileName);
+
+                        // report project, repository, branch
+                        using var report = File.AppendText(reportName);
+                        await report.WriteLineAsync($"{project.Key};{repository.Slug};{branch.DisplayId}");
 
                     }
-                    SetAttributesNormal("tempdir");
-                    Directory.Delete("tempdir", true);
-
+                    await DeleteFolder(workingFolder);
                 }
             }
             logger.LogInformation("End");
@@ -78,32 +79,33 @@ namespace BitbucketMigrationTool.Commands
         }
 
 
-        static void SetAttributesNormal(string directoryPath)
+        static Task DeleteFolder(string directoryPath)
         {
             foreach (var subDir in Directory.GetDirectories(directoryPath))
-                SetAttributesNormal(subDir);
+                DeleteFolder(subDir);
             foreach (var file in Directory.GetFiles(directoryPath).Select(s => new FileInfo(s)))
             {
                 file.Attributes = FileAttributes.Normal;
             }
+            Directory.Delete(directoryPath, true);
+            return Task.CompletedTask;
         }
 
 
 
-        static Task ListFiles(string directoryPath, string project, string repository, string branch, long size)
+        static Task ListFiles(string directoryPath, string project, string repository, string branch, long size, string fileName)
         {
             // List the files in the current directory
             string[] files = Directory.GetFiles(directoryPath);
 
-            var lf = files.Select(s => new FileInfo(s)).Where(w => w.Length > size).Select(fileInfo => $"{project};{repository};{branch};{fileInfo};{fileInfo.Name};{fileInfo.Length}");
-
-            File.AppendAllLines("largefile.csv", lf);
+            var lf = files.Where(w => !w.Contains(".git")).Select(s => new FileInfo(s)).Where(w => w.Length > size).Select(fileInfo => $"{project};{repository};{branch};{fileInfo};{fileInfo.Length}");
+            File.AppendAllLines(fileName, lf);
 
             // Recursively list files in subdirectories
             string[] subDirectories = Directory.GetDirectories(directoryPath);
             foreach (string subDirectory in subDirectories)
             {
-                ListFiles(subDirectory, project, repository, branch, size);
+                ListFiles(subDirectory, project, repository, branch, size, fileName);
             }
 
             return Task.CompletedTask;
