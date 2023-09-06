@@ -25,8 +25,14 @@ namespace BitbucketMigrationTool.Commands
         {
         }
 
-        [Option("-s|--size", CommandOptionType.SingleValue, Description = "size in B")]
+        [Option("-s|--size", CommandOptionType.SingleValue, Description = "Size in B")]
         public long Size { get; set; } = 0;
+
+        [Option("-sp|--skip-projects", CommandOptionType.SingleValue, Description = "Projects To Skip")]
+        public string SkipProjects { get; set; } = string.Empty;
+
+        [Option("-sr|--skip-repositories", CommandOptionType.SingleValue, Description = "Repositories To Skip")]
+        public string SkipRepositories { get; set; } = string.Empty;
 
         private async Task<int> OnExecute(CommandLineApplication app)
         {
@@ -43,12 +49,12 @@ namespace BitbucketMigrationTool.Commands
             // Loop over all projects
             var projects = await bitbucketClient.GetProjectsAsync();
 
-            foreach (var project in projects)
+            foreach (var project in projects.Where(w => !SkipProjects.Split(",").Contains(w.Key)))
             {
                 logger.LogInformation($"Project: {project.Key}");
                 var repositories = await bitbucketClient.GetRepositoriesAsync(project.Key);
                 // Loop over all repositories
-                foreach (var repository in repositories)
+                foreach (var repository in repositories.Where(w => !SkipRepositories.Split(",").Contains(w.Slug)))
                 {
                     logger.LogInformation($"Repository: {repository.Slug}");
 
