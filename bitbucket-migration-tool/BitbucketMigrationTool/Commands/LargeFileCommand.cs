@@ -34,6 +34,10 @@ namespace BitbucketMigrationTool.Commands
         [Option("-sr|--skip-repositories", CommandOptionType.SingleValue, Description = "Repositories To Skip")]
         public string SkipRepositories { get; set; } = string.Empty;
 
+        [Option("-c|--continue", CommandOptionType.SingleValue, Description = "Continue after interuption")]
+        public bool Continue { get; set; } = true;
+
+
         private async Task<int> OnExecute(CommandLineApplication app)
         {
             logger.LogInformation("Start");
@@ -42,19 +46,37 @@ namespace BitbucketMigrationTool.Commands
             const string reportName = "report.csv";
             const string workingFolder = "tempdir";
 
-            File.Delete(largeFileName);
-            File.Delete(reportName);
+
+            var projects2beskipped = SkipProjects.Split(",").ToList();
+            var repos2beskipped = SkipRepositories.Split(",").ToList();
+
+            if (!Continue)
+            {
+                File.Delete(largeFileName);
+                File.Delete(reportName);
+            }
+            else
+            {
+                projects2beskipped = projects2beskipped.Concat(await GetDistinctColumnValuesAsync(reportName, 0)).ToList();
+                repos2beskipped = repos2beskipped.Concat(await GetDistinctColumnValuesAsync(reportName, 1)).ToList();
+
+                var lastProject = await GetLastNonEmptyColumnValueAsync(reportName, 0);
+                var lastRepo = await GetLastNonEmptyColumnValueAsync(reportName, 1);
+
+                projects2beskipped.Remove(lastProject);
+                repos2beskipped.Remove(lastRepo);
+            }
 
 
             // Loop over all projects
             var projects = await bitbucketClient.GetProjectsAsync();
 
-            foreach (var project in projects.Where(w => !SkipProjects.Split(",").Contains(w.Key)))
+            foreach (var project in projects.Where(w => !projects2beskipped.Contains(w.Key)))
             {
                 logger.LogInformation($"Project: {project.Key}");
                 var repositories = await bitbucketClient.GetRepositoriesAsync(project.Key);
                 // Loop over all repositories
-                foreach (var repository in repositories.Where(w => !SkipRepositories.Split(",").Contains(w.Slug)))
+                foreach (var repository in repositories.Where(w => !repos2beskipped.Contains(w.Slug)))
                 {
                     logger.LogInformation($"Repository: {repository.Slug}");
 
@@ -82,6 +104,68 @@ namespace BitbucketMigrationTool.Commands
             }
             logger.LogInformation("End");
             return 0;
+        }
+
+        static async Task<string> GetLastNonEmptyColumnValueAsync(string filePath, int columnIndex, char separator = ';')
+        {
+            string lastNonEmptyValue = null;
+
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                string prevLine = null;
+                string line;
+
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(line))
+                    {
+                        prevLine = line;
+                    }
+                }
+
+                if (prevLine != null)
+                {
+                    string[] columns = prevLine.Split(separator);
+
+                    if (columns.Length > columnIndex)
+                    {
+                        lastNonEmptyValue = columns[columnIndex];
+                    }
+                }
+            }
+
+            return lastNonEmptyValue;
+        }
+
+        static async Task<HashSet<string>> GetDistinctColumnValuesAsync(string filePath, int columnIndex, char separator = ';')
+        {
+            // Create a HashSet to store distinct values.
+            HashSet<string> distinctValues = new HashSet<string>();
+
+            // Open the CSV file for reading.
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                // Read the header line if it exists (optional).
+                string headerLine = await reader.ReadLineAsync();
+
+                // Read each line from the CSV file.
+                while (!reader.EndOfStream)
+                {
+                    string line = await reader.ReadLineAsync();
+
+                    // Split the line into columns.
+                    string[] columns = line.Split(separator);
+
+                    // Ensure the line has enough columns.
+                    if (columns.Length > columnIndex)
+                    {
+                        // Add the value to the HashSet (automatically removes duplicates).
+                        distinctValues.Add(columns[columnIndex]);
+                    }
+                }
+            }
+
+            return distinctValues;
         }
 
 
