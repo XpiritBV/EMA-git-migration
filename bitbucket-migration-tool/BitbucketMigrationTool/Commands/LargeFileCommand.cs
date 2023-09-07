@@ -1,18 +1,8 @@
 ﻿using BitbucketMigrationTool.Models;
-using BitbucketMigrationTool.Models.Bitbucket.General;
-using BitbucketMigrationTool.Models.Bitbucket.Repository;
 using BitbucketMigrationTool.Services;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace BitbucketMigrationTool.Commands
 {
@@ -37,8 +27,7 @@ namespace BitbucketMigrationTool.Commands
         [Option("-c|--continue", CommandOptionType.SingleValue, Description = "Continue after interuption")]
         public bool Continue { get; set; } = true;
 
-
-        private async Task<int> OnExecute(CommandLineApplication app)
+        protected override async Task<int> OnExecute(CommandLineApplication app)
         {
             logger.LogInformation("Start");
 
@@ -167,21 +156,6 @@ namespace BitbucketMigrationTool.Commands
 
             return distinctValues;
         }
-
-
-        static Task DeleteFolder(string directoryPath)
-        {
-            foreach (var subDir in Directory.GetDirectories(directoryPath))
-                DeleteFolder(subDir);
-            foreach (var file in Directory.GetFiles(directoryPath).Select(s => new FileInfo(s)))
-            {
-                file.Attributes = FileAttributes.Normal;
-            }
-            Directory.Delete(directoryPath, true);
-            return Task.CompletedTask;
-        }
-
-
 
         static Task ListFiles(string directoryPath, string project, string repository, string branch, long size, string fileName)
         {

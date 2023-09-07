@@ -4,11 +4,13 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
+using System.IO;
 
 namespace BitbucketMigrationTool.Commands
 {
-    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase), VersionOptionFromMember("--version", MemberName = "GetVersion")]
-    internal class CommandBase
+    [VersionOptionFromMember("--version|-v", MemberName = "GetVersion")]
+    [HelpOption("--help|-h")]
+    internal abstract class CommandBase
     {
         internal readonly ILogger logger;
         internal readonly AppSettings appSettings;
@@ -20,6 +22,12 @@ namespace BitbucketMigrationTool.Commands
             this.logger = logger;
             this.appSettings = appSettingsOptions.Value;
             this.bitbucketClient = bitbucketClient;
+        }
+
+        protected virtual Task<int> OnExecute(CommandLineApplication app)
+        {
+            app.ShowHelp();
+            return Task.FromResult(0);
         }
 
         internal Task GitAction(string args, string workingdir = "")
@@ -52,5 +60,28 @@ namespace BitbucketMigrationTool.Commands
         }
 
         internal string GetVersion() => appSettings.AppVersion;
+
+        protected static Task DeleteFolder(string directoryPath)
+        {
+            var directory = new DirectoryInfo(directoryPath);
+            return directory.Exists ? DeleteFolder(directory) : Task.CompletedTask;
+        }
+
+        protected static Task DeleteFolder(DirectoryInfo directory)
+        {
+            foreach (var subDir in directory.GetDirectories())
+            {
+                DeleteFolder(subDir);
+            }
+            
+            foreach (var file in directory.GetFiles())
+            {
+                file.Attributes = FileAttributes.Normal;
+            }
+            
+            directory.Delete(true);
+            
+            return Task.CompletedTask;
+        }
     }
 }

@@ -45,8 +45,7 @@ var builder = new HostBuilder()
 
 try
 {
-    //return await builder.RunCommandLineApplicationAsync<MigrateCommand>(args);
-    return await builder.RunCommandLineApplicationAsync<LargeFileCommand>(args);
+    return await builder.RunCommandLineApplicationAsync<DummyCommand>(args);
 }
 catch (Exception ex)
 {
