@@ -1,7 +1,8 @@
 {
   "profiles": {
     "BitbucketMigrationTool": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "migrate -p MIG -r workrepo -tp TMP-EMA"
     }
   }
 }

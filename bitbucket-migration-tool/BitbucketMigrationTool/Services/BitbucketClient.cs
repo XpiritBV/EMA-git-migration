@@ -25,6 +25,9 @@ namespace BitbucketMigrationTool.Services
         public Task<IEnumerable<Repo>> GetRepositoriesAsync(string projectKey)
             => GetPagedResultAsync<Repo>($"projects/{projectKey}/repos");
 
+        public Task<Repo?> GetRepositoryAsync(string projectKey, string repositorySlug)
+            => httpClient.GetFromJsonAsync<Repo>($"projects/{projectKey}/repos/{repositorySlug}");
+
         public Task<IEnumerable<Branch>> GetBranchesAsync(string projectKey, string repositorySlug)
             => GetPagedResultAsync<Branch>($"projects/{projectKey}/repos/{repositorySlug}/branches");
 

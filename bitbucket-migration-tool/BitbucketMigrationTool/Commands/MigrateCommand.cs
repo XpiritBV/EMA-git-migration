@@ -5,65 +5,107 @@ using BitbucketMigrationTool.Services;
 using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using System.Diagnostics;
 using System.Text.RegularExpressions;
 using MarkdownLink = BitbucketMigrationTool.Models.Markdown.Link;
+
 namespace BitbucketMigrationTool.Commands
 {
     [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
-    [VersionOptionFromMember("--version", MemberName = nameof(GetVersion))]
     internal class MigrateCommand : CommandBase
     {
+        private const string tempDir = "tempdir";
 
         [Option("-p|--project", CommandOptionType.SingleValue, Description = "Project key")]
         public string Project { get; set; }
 
-        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient) :base(logger,appSettingsOptions, bitbucketClient)
+        [Option("-r|--repository", CommandOptionType.SingleValue, Description = "Repository slug")]
+        public string Repository { get; set; }
+
+        [Option("-b|--branch", CommandOptionType.MultipleValue, Description = "Aditional branches to migrate")]
+        public string[] Branches { get; set; } = Array.Empty<string>();
+
+        [Option("-tp|--target-prefix", CommandOptionType.SingleOrNoValue, Description = "Prefix for target project")]
+        public (bool HasValue, string Value) TargetPrefix { get; set; }
+
+        [Option("-t|--target", CommandOptionType.SingleOrNoValue, Description = "Target project slug")]
+        public (bool HasValue, string Value) TargetProject { get; set; }
+
+        [Option("-tr|--target-repository", CommandOptionType.SingleOrNoValue, Description = "Target repository slug")]
+        public (bool HasValue, string Value) TargetRepository { get; set; }
+
+        private string TargetProjectSlug => $"{(TargetPrefix.HasValue ? $"{TargetPrefix.Value}-" : string.Empty)}{(TargetProject.HasValue ? TargetProject.Value : Project)}";
+
+        private string TargetRepositorySlug => TargetRepository.HasValue ? TargetRepository.Value : Repository;
+
+        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient) 
+            : base(logger, appSettingsOptions, bitbucketClient)
         {
         }
 
-        private async Task<int> OnExecute(CommandLineApplication app)
+        protected override async Task<int> OnExecute(CommandLineApplication app)
         {
-            var repositories = await bitbucketClient.GetRepositoriesAsync(Project);
-            foreach (var repository in repositories)
+            await DeleteFolder(tempDir);
+
+            var repository = await bitbucketClient.GetRepositoryAsync(Project, Repository);
+            if (repository == null)
             {
-                logger.LogInformation($"Found repository {repository.Name}");
-
-                //TODO: add ssh credentials
-                await GitAction($"clone {repository.Links.Clone.First(x => x.Name == "http").Href} tempdir");
-
-                var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
-                foreach (var branch in branches.OrderBy(b => b.Default ? 1 : 0))
-                {
-                    logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
-
-                    await GitAction($"checkout {branch.DisplayId}", "tempdir");
-                }
-
-                await GitAction("fetch --tags", "tempdir");
-                await GitAction("remote rm origin", "tempdir");
-
-                var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
-                foreach (var pullRequest in pullRequests)
-                {
-                    logger.LogInformation($"\t-> Found pull request {pullRequest.Title}");
-                    var activities = await bitbucketClient.GetPullRequestActivities(Project, repository.Slug, pullRequest.Id);
-                    foreach (var activity in activities.Where(x => x.Action == ActivityActionType.COMMENTED).OrderBy(x => x.CreatedDate))
-                    {
-                        logger.LogInformation($"\t\t-> Found activity {activity.Action}");
-                        logger.LogInformation($"\t\t-> {activity.Comment.Author.DisplayName}: {activity.Comment.Text}");
-                        var links = ScanForLinks(activity.Comment.Text);
-                        foreach (var link in links)
-                        {
-                            logger.LogInformation($"\t\t\t-> Found link {link}, is an attachment: {link.IsAttachment}");
-                        }
-                    }
-                }
+                logger.LogError($"Repository {Repository} not found");
+                return 1;
             }
+            
+            await CloneRepo(repository);
+            await CheckoutBranches(repository);
+            await SwitchGitRemote();
+            await HandlePullRequests(repository);
+
+            await DeleteFolder(tempDir);
+
             return 0;
         }
 
-        
+        private async Task CloneRepo(Repo repository)
+        {
+            logger.LogInformation($"Cloning repository {repository.Name}");
+
+            await GitAction($"clone {repository.Links.Clone.First(x => x.Name == "http").Href} {tempDir}");
+        }
+
+        private async Task SwitchGitRemote()
+        {
+            await GitAction("fetch --tags", tempDir);
+            await GitAction("remote rm origin", tempDir);
+        }
+
+        private async Task HandlePullRequests(Repo repository)
+        {
+            var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
+            foreach (var pullRequest in pullRequests)
+            {
+                logger.LogInformation($"\t-> Found pull request {pullRequest.Title}");
+                var activities = await bitbucketClient.GetPullRequestActivities(Project, repository.Slug, pullRequest.Id);
+                foreach (var activity in activities.Where(x => x.Action == ActivityActionType.COMMENTED).OrderBy(x => x.CreatedDate))
+                {
+                    logger.LogInformation($"\t\t-> Found activity {activity.Action}");
+                    logger.LogInformation($"\t\t-> {activity.Comment.Author.DisplayName}: {activity.Comment.Text}");
+                    var links = ScanForLinks(activity.Comment.Text);
+                    foreach (var link in links)
+                    {
+                        logger.LogInformation($"\t\t\t-> Found link {link}, is an attachment: {link.IsAttachment}");
+                    }
+                }
+            }
+        }
+
+        private async Task CheckoutBranches(Repo repository)
+        {
+            var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
+            foreach (var branch in branches.Where(b => b.Default || Branches.Contains(b.DisplayId)).OrderBy(b => b.Default ? 1 : 0))
+            {
+                logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
+
+                await GitAction($"checkout {branch.DisplayId}", tempDir);
+            }
+        }
 
         private IEnumerable<MarkdownLink> ScanForLinks(string text)
         {
