@@ -42,6 +42,15 @@ namespace BitbucketMigrationTool.Commands
         {
         }
 
+        /*
+            Create project if not exists (Original name or new name)
+	            Create repository if not exists (Original name or new name)
+		            Create branches if not exist, full history
+		            Create PR if not exists and if necessary (author!)
+			            Create Comment if not exists (author!)
+			            Create Attachment if not exists and if necessary
+        */
+
         protected override async Task<int> OnExecute(CommandLineApplication app)
         {
             await DeleteFolder(tempDir);
