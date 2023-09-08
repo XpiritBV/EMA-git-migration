@@ -7,6 +7,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
+using System.Net.Http;
+using System.Text;
 
 var configuration = new ConfigurationBuilder()
 .SetBasePath(Directory.GetCurrentDirectory())
@@ -37,9 +39,18 @@ var builder = new HostBuilder()
 
             services.AddHttpClient<BitbucketClient>(client =>
             {
-                var bitbucketConfig = configuration.GetSection("Bitbucket").Get<BitbucketConfig>();
+                var bitbucketConfig = configuration.GetSection("Bitbucket").Get<RepositoryConfig>();
                 client.BaseAddress = new Uri($"{bitbucketConfig.Url}/rest/api/{bitbucketConfig.ApiVersion}/");
                 client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bitbucketConfig.Key}");
+            });
+
+            services.AddHttpClient<AZDevopsClient>(client =>
+            {
+                var azdevopsConfig = configuration.GetSection("AzureDevops").Get<RepositoryConfig>();
+                client.BaseAddress = new Uri($"{azdevopsConfig.Url}/_apis/");
+                var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{azdevopsConfig.Key}"));
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
+                client.DefaultRequestHeaders.Add("Accept", $"application/json; api-version={azdevopsConfig.ApiVersion}");
             });
         });
 

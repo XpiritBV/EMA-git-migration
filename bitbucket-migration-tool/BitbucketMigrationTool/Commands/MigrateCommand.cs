@@ -37,8 +37,8 @@ namespace BitbucketMigrationTool.Commands
 
         private string TargetRepositorySlug => TargetRepository.HasValue ? TargetRepository.Value : Repository;
 
-        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient) 
-            : base(logger, appSettingsOptions, bitbucketClient)
+        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
+            : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
 
@@ -53,6 +53,10 @@ namespace BitbucketMigrationTool.Commands
                 return 1;
             }
             
+            var projects = await aZDevopsClient.GetProjectsAsync();
+
+            var targerProject = projects.FirstOrDefault(x => x.Name == TargetProjectSlug) ?? (await aZDevopsClient.CreateProjectAsync(new Models.AzureDevops.CreateProjectRequest {  Name = TargetProjectSlug, Description = "", Visibility = Models.AzureDevops.ProjectVisibility.Private}));
+
             await CloneRepo(repository);
             await CheckoutBranches(repository);
             await SwitchGitRemote();
