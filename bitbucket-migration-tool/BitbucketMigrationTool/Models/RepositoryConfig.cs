@@ -1,4 +1,4 @@
-﻿internal class BitbucketConfig
+﻿internal class RepositoryConfig
 {
     public string Url { get; set; }
     public string Key { get; set; }

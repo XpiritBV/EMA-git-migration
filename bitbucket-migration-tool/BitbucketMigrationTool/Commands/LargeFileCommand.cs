@@ -11,7 +11,8 @@ namespace BitbucketMigrationTool.Commands
     internal class LargeFileCommand : CommandBase
     {
 
-        public LargeFileCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient) : base(logger, appSettingsOptions, bitbucketClient)
+        public LargeFileCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
+            : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
 
