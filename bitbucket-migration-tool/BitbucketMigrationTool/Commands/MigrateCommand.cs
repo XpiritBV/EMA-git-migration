@@ -1,4 +1,5 @@
 ﻿using BitbucketMigrationTool.Models;
+using BitbucketMigrationTool.Models.AzureDevops;
 using BitbucketMigrationTool.Models.Bitbucket.PullRequest;
 using BitbucketMigrationTool.Models.Bitbucket.Repository;
 using BitbucketMigrationTool.Services;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using MarkdownLink = BitbucketMigrationTool.Models.Markdown.Link;
+using AZRepo = BitbucketMigrationTool.Models.AzureDevops.Repository.Repo;
 
 namespace BitbucketMigrationTool.Commands
 {
@@ -52,19 +54,43 @@ namespace BitbucketMigrationTool.Commands
                 logger.LogError($"Repository {Repository} not found");
                 return 1;
             }
+
+            await EnsureAZDevopsProjectisCreated();
             
-            var projects = await aZDevopsClient.GetProjectsAsync();
-
-            var targerProject = projects.FirstOrDefault(x => x.Name == TargetProjectSlug) ?? (await aZDevopsClient.CreateProjectAsync(new Models.AzureDevops.CreateProjectRequest {  Name = TargetProjectSlug, Description = "", Visibility = Models.AzureDevops.ProjectVisibility.Private}));
-
+            var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug) 
+                ?? (await aZDevopsClient.CreateRepositoryAsync(TargetProjectSlug, TargetRepositorySlug));
+            
             await CloneRepo(repository);
             await CheckoutBranches(repository);
-            await SwitchGitRemote();
+            await SwitchGitRemote(targetRepository);
             await HandlePullRequests(repository);
 
             await DeleteFolder(tempDir);
 
             return 0;
+        }
+
+        private async Task EnsureAZDevopsProjectisCreated()
+        {
+            var projects = await aZDevopsClient.GetProjectsAsync();
+
+            var targerProject = projects.FirstOrDefault(x => x.Name == TargetProjectSlug);
+            if (targerProject == null)
+            {
+                var result = await aZDevopsClient.CreateProjectAsync(new Models.AzureDevops.CreateProjectRequest { Name = TargetProjectSlug, Description = "", Visibility = Models.AzureDevops.ProjectVisibility.Private });
+                if(result == null)
+                {
+                    logger.LogError($"Failed to create project {TargetProjectSlug}");
+                    throw new Exception($"Failed to create project {TargetProjectSlug}");
+                }
+
+                while (!result.Status.Equals("succeeded"))
+                {
+                    logger.LogDebug($"Waiting for project to be created");
+                    await Task.Delay(100);
+                    result = await aZDevopsClient.GetOperationLinkAsync(result.Id);
+                }
+            }
         }
 
         private async Task CloneRepo(Repo repository)
@@ -74,10 +100,13 @@ namespace BitbucketMigrationTool.Commands
             await GitAction($"clone {repository.Links.Clone.First(x => x.Name == "http").Href} {tempDir}");
         }
 
-        private async Task SwitchGitRemote()
+        private async Task SwitchGitRemote(AZRepo repo)
         {
             await GitAction("fetch --tags", tempDir);
             await GitAction("remote rm origin", tempDir);
+            await GitAction($"remote add origin {repo.RemoteUrl}", tempDir);
+            await GitAction("push origin --all", tempDir);
+            await GitAction("push --tags", tempDir);
         }
 
         private async Task HandlePullRequests(Repo repository)
@@ -103,7 +132,7 @@ namespace BitbucketMigrationTool.Commands
         private async Task CheckoutBranches(Repo repository)
         {
             var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
-            foreach (var branch in branches.Where(b => b.Default || Branches.Contains(b.DisplayId)).OrderBy(b => b.Default ? 1 : 0))
+            foreach (var branch in branches.Where(b => b.Default || Branches.Contains(b.DisplayId)).OrderBy(b => b.Default ? 0 : 1))
             {
                 logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
 
