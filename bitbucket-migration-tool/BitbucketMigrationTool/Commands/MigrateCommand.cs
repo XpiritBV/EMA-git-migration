@@ -1,5 +1,4 @@
 ﻿using BitbucketMigrationTool.Models;
-using BitbucketMigrationTool.Models.AzureDevops;
 using BitbucketMigrationTool.Models.Bitbucket.PullRequest;
 using BitbucketMigrationTool.Models.Bitbucket.Repository;
 using BitbucketMigrationTool.Services;
@@ -63,20 +62,26 @@ namespace BitbucketMigrationTool.Commands
                 logger.LogError($"Repository {Repository} not found");
                 return 1;
             }
-
+            var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
             await EnsureAZDevopsProjectisCreated();
-            
-            var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug) 
+
+            var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug)
                 ?? (await aZDevopsClient.CreateRepositoryAsync(TargetProjectSlug, TargetRepositorySlug));
-            
+
             await CloneRepo(repository);
-            await CheckoutBranches(repository);
+            await CheckoutBranches(branches);
             await SwitchGitRemote(targetRepository);
             await HandlePullRequests(repository);
-
+            await FixDefaultBranch(branches, targetRepository);
             await DeleteFolder(tempDir);
 
             return 0;
+        }
+
+        private async Task FixDefaultBranch(IEnumerable<Branch> branches, AZRepo targetRepository)
+        {
+            var defaultBranch = branches.FirstOrDefault(x => x.Default || x.DisplayId.Equals("main", StringComparison.InvariantCultureIgnoreCase) || x.DisplayId.Equals("master", StringComparison.InvariantCultureIgnoreCase));
+            await aZDevopsClient.SetMainBranch(TargetProjectSlug, targetRepository.Id, defaultBranch.DisplayId);
         }
 
         private async Task EnsureAZDevopsProjectisCreated()
@@ -138,9 +143,8 @@ namespace BitbucketMigrationTool.Commands
             }
         }
 
-        private async Task CheckoutBranches(Repo repository)
+        private async Task CheckoutBranches(IEnumerable<Branch> branches)
         {
-            var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
             foreach (var branch in branches.Where(b => b.Default || Branches.Contains(b.DisplayId)).OrderBy(b => b.Default ? 0 : 1))
             {
                 logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
