@@ -59,6 +59,16 @@ namespace BitbucketMigrationTool.Services
             return JsonSerializer.Deserialize<OperationLink>(body, options);
         }
 
+        internal Task SetMainBranch(string targetProjectSlug, Guid repoId, string branchName)
+        {
+            var jsonRequestBody = JsonSerializer.Serialize(new
+            {
+                DefaultBranch = $"refs/heads/{branchName}"
+            }, options);
+
+            return httpClient.PatchAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+        }
+
         internal async Task<Repo> CreateRepositoryAsync(string targetProjectSlug, string targetRepositorySlug)
         {
             var jsonRequestBody = JsonSerializer.Serialize(new
