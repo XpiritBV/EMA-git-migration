@@ -47,7 +47,7 @@ var builder = new HostBuilder()
             services.AddHttpClient<AZDevopsClient>(client =>
             {
                 var azdevopsConfig = configuration.GetSection("AzureDevops").Get<RepositoryConfig>();
-                client.BaseAddress = new Uri($"{azdevopsConfig.Url}/_apis/");
+                client.BaseAddress = new Uri($"{azdevopsConfig.Url}/");
                 var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{azdevopsConfig.Key}"));
                 client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
                 client.DefaultRequestHeaders.Add("Accept", $"application/json; api-version={azdevopsConfig.ApiVersion}");
