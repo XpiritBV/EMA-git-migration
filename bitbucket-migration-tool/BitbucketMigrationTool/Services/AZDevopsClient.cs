@@ -80,5 +80,13 @@ namespace BitbucketMigrationTool.Services
             var body = await response.Content.ReadAsStringAsync();
             return JsonSerializer.Deserialize<Repo>(body, options);
         }
+
+        internal async Task CreatePullRequest(string targetProjectSlug, Guid repoId, PullRequest pullRequest)
+        {
+            var jsonRequestBody = JsonSerializer.Serialize(pullRequest, options);
+
+            var response = await httpClient.PostAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+            var body = await response.Content.ReadAsStringAsync();
+        }
     }
 }

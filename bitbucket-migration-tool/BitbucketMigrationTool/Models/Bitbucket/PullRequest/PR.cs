@@ -1,4 +1,5 @@
-﻿using System.Xml.Linq;
+﻿using BitbucketMigrationTool.Models.Bitbucket.General;
+using System.Xml.Linq;
 
 namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
 {
@@ -19,6 +20,7 @@ namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
         public ulong? ClosedDate { get; set; }
         public List<Participant> Participants { get; set; }
         public List<Participant> Reviewers { get; set; }
+        public Participant Author { get; set; }
     }
 }
 
