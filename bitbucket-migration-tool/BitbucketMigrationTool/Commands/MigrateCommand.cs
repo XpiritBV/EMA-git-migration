@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using MarkdownLink = BitbucketMigrationTool.Models.Markdown.Link;
 using AZRepo = BitbucketMigrationTool.Models.AzureDevops.Repository.Repo;
+using AZPullRequest = BitbucketMigrationTool.Models.AzureDevops.Repository.PullRequest;
 
 namespace BitbucketMigrationTool.Commands
 {
@@ -71,7 +72,7 @@ namespace BitbucketMigrationTool.Commands
             await CloneRepo(repository);
             await CheckoutBranches(branches);
             await SwitchGitRemote(targetRepository);
-            await HandlePullRequests(repository);
+            await HandlePullRequests(repository, targetRepository);
             await FixDefaultBranch(branches, targetRepository);
             await DeleteFolder(tempDir);
 
@@ -123,12 +124,14 @@ namespace BitbucketMigrationTool.Commands
             await GitAction("push --tags", tempDir);
         }
 
-        private async Task HandlePullRequests(Repo repository)
+        private async Task HandlePullRequests(Repo repository, AZRepo repo)
         {
             var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
             foreach (var pullRequest in pullRequests)
             {
-                logger.LogInformation($"\t-> Found pull request {pullRequest.Title}");
+                await aZDevopsClient.CreatePullRequest(TargetProjectSlug, repo.Id, FromPullRequest(pullRequest); ;
+
+
                 var activities = await bitbucketClient.GetPullRequestActivities(Project, repository.Slug, pullRequest.Id);
                 foreach (var activity in activities.Where(x => x.Action == ActivityActionType.COMMENTED).OrderBy(x => x.CreatedDate))
                 {
@@ -162,5 +165,14 @@ namespace BitbucketMigrationTool.Commands
                 yield return new MarkdownLink(match.Groups["text"].Value, match.Groups["url"].Value);
             }
         }
+
+        private static AZPullRequest FromPullRequest(PR pullRequest)
+            => new AZPullRequest
+            {
+                Title = pullRequest.Title,
+                Description = $"{pullRequest.Author.User}: {pullRequest.Description}",
+                SourceRefName = $"refs/heads/{pullRequest.FromRef.DisplayId}",
+                TargetRefName = $"refs/heads/{pullRequest.ToRef.DisplayId}",
+            };
     }
 }

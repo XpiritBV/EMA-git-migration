@@ -9,6 +9,11 @@
         public string Slug { get; set; }
         public bool Active { get; set; }
         public string EmailAddress { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Name} <{EmailAddress}>";
+        }
     }
 
 }
