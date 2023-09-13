@@ -10,6 +10,7 @@ namespace BitbucketMigrationTool.Models.Bitbucket.PullRequest
         public ActivityActionType Action { get; set; }
         public string CommentAction { get; set; }
         public Comment Comment { get; set; }
+        public CommentAnchor CommentAnchor { get; set; }
     }
 }
 

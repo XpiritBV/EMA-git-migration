@@ -8,7 +8,8 @@ using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
 using MarkdownLink = BitbucketMigrationTool.Models.Markdown.Link;
 using AZRepo = BitbucketMigrationTool.Models.AzureDevops.Repository.Repo;
-using AZPullRequest = BitbucketMigrationTool.Models.AzureDevops.Repository.PullRequest;
+using AZPullRequest = BitbucketMigrationTool.Models.AzureDevops.Repository.CreatePullRequest;
+using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
 
 namespace BitbucketMigrationTool.Commands
 {
@@ -35,11 +36,14 @@ namespace BitbucketMigrationTool.Commands
         [Option("-tr|--target-repository", CommandOptionType.SingleOrNoValue, Description = "Target repository slug")]
         public (bool HasValue, string Value) TargetRepository { get; set; }
 
+        [Option("-s|--skip-if-target-exists", CommandOptionType.NoValue, Description = "Skip if target repository exists")]
+        public bool SkipIfTargetExists { get; set; } = false;
+
         private string TargetProjectSlug => $"{(TargetPrefix.HasValue ? $"{TargetPrefix.Value}-" : string.Empty)}{(TargetProject.HasValue ? TargetProject.Value : Project)}";
 
         private string TargetRepositorySlug => TargetRepository.HasValue ? TargetRepository.Value : Repository;
 
-        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
+        public MigrateCommand(ILogger<MigrateCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
             : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
@@ -66,15 +70,24 @@ namespace BitbucketMigrationTool.Commands
             var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
             await EnsureAZDevopsProjectisCreated();
 
-            var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug)
-                ?? (await aZDevopsClient.CreateRepositoryAsync(TargetProjectSlug, TargetRepositorySlug));
+            var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug);
+            var repositoryExists = targetRepository != null;
 
-            await CloneRepo(repository);
-            await CheckoutBranches(branches);
-            await SwitchGitRemote(targetRepository);
+            if ((!SkipIfTargetExists && repositoryExists) || !repositoryExists)
+            {
+                if (!repositoryExists)
+                {
+                    targetRepository = await aZDevopsClient.CreateRepositoryAsync(TargetProjectSlug, TargetRepositorySlug);
+                }
+
+                await CloneRepo(repository);
+                await CheckoutBranches(branches);
+                await SwitchGitRemote(targetRepository);
+                await FixDefaultBranch(branches, targetRepository);
+                await DeleteFolder(tempDir);
+            }
+
             await HandlePullRequests(repository, targetRepository);
-            await FixDefaultBranch(branches, targetRepository);
-            await DeleteFolder(tempDir);
 
             return 0;
         }
@@ -93,7 +106,7 @@ namespace BitbucketMigrationTool.Commands
             if (targerProject == null)
             {
                 var result = await aZDevopsClient.CreateProjectAsync(new Models.AzureDevops.CreateProjectRequest { Name = TargetProjectSlug, Description = "", Visibility = Models.AzureDevops.ProjectVisibility.Private });
-                if(result == null)
+                if (result == null)
                 {
                     logger.LogError($"Failed to create project {TargetProjectSlug}");
                     throw new Exception($"Failed to create project {TargetProjectSlug}");
@@ -120,7 +133,7 @@ namespace BitbucketMigrationTool.Commands
             await GitAction("fetch --tags", tempDir);
             await GitAction("remote rm origin", tempDir);
             await GitAction($"remote add origin {repo.RemoteUrl}", tempDir);
-            await GitAction("push origin --all", tempDir);
+            await GitAction("push origin --all --force", tempDir);
             await GitAction("push --tags", tempDir);
         }
 
@@ -129,14 +142,22 @@ namespace BitbucketMigrationTool.Commands
             var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
             foreach (var pullRequest in pullRequests)
             {
-                await aZDevopsClient.CreatePullRequest(TargetProjectSlug, repo.Id, FromPullRequest(pullRequest); ;
-
+                var response = await aZDevopsClient.CreatePullRequest(TargetProjectSlug, repo.Id, FromPullRequest(pullRequest));
 
                 var activities = await bitbucketClient.GetPullRequestActivities(Project, repository.Slug, pullRequest.Id);
                 foreach (var activity in activities.Where(x => x.Action == ActivityActionType.COMMENTED).OrderBy(x => x.CreatedDate))
                 {
-                    logger.LogInformation($"\t\t-> Found activity {activity.Action}");
-                    logger.LogInformation($"\t\t-> {activity.Comment.Author.DisplayName}: {activity.Comment.Text}");
+                    var thread = await aZDevopsClient.CreatePullRequestThread(TargetProjectSlug, repo.Id, response.PullRequestId, FromActivity(activity));
+
+                    foreach (var comment in activity.Comment.Comments)
+                    {
+                        await aZDevopsClient.CreatePullRequestThreadComment(TargetProjectSlug, repo.Id, response.PullRequestId, thread.Id, new PullRequestThreadComment
+                        {
+                            ParentCommentId = 1,
+                            Content = $"{comment.Author}: {comment.Text}"
+                        });
+                    }
+
                     var links = ScanForLinks(activity.Comment.Text);
                     foreach (var link in links)
                     {
@@ -174,5 +195,21 @@ namespace BitbucketMigrationTool.Commands
                 SourceRefName = $"refs/heads/{pullRequest.FromRef.DisplayId}",
                 TargetRefName = $"refs/heads/{pullRequest.ToRef.DisplayId}",
             };
+
+        private static CreatePullRequestThreadRequest FromActivity(Activity activity)
+        {
+            return new CreatePullRequestThreadRequest
+            {
+                Comments = new[] 
+                {
+                    new PullRequestThreadComment
+                    {
+                        Content = $"{activity.Comment.Author}:{activity.Comment.Text}"
+                    }
+                },
+                Status = activity.Comment.ThreadResolved ? PullRequestThreadStatus.Fixed : PullRequestThreadStatus.Active,
+                ThreadContext = activity.CommentAnchor != null ? PullRequestThreadContext.Create(activity.CommentAnchor.Path, activity.CommentAnchor.Line, 1) : null,
+            };
+        }
     }
 }
