@@ -1,6 +1,8 @@
 ﻿using BitbucketMigrationTool.Models.AzureDevops;
 using BitbucketMigrationTool.Models.AzureDevops.General;
 using BitbucketMigrationTool.Models.AzureDevops.Repository;
+using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
+using Microsoft.Extensions.Logging;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -10,11 +12,13 @@ namespace BitbucketMigrationTool.Services
     internal class AZDevopsClient
     {
         private readonly HttpClient httpClient;
+        private readonly ILogger logger;
         private readonly JsonSerializerOptions options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 
-        public AZDevopsClient(HttpClient httpClient)
+        public AZDevopsClient(HttpClient httpClient, ILogger<AZDevopsClient> logger)
         {
             this.httpClient = httpClient;
+            this.logger = logger;
             options.Converters.Add(new JsonStringEnumConverter());
         }
 
@@ -81,12 +85,31 @@ namespace BitbucketMigrationTool.Services
             return JsonSerializer.Deserialize<Repo>(body, options);
         }
 
-        internal async Task CreatePullRequest(string targetProjectSlug, Guid repoId, PullRequest pullRequest)
+        internal async Task<CreatePullRequestResponse> CreatePullRequest(string targetProjectSlug, Guid repoId, CreatePullRequest pullRequest)
         {
             var jsonRequestBody = JsonSerializer.Serialize(pullRequest, options);
 
             var response = await httpClient.PostAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
             var body = await response.Content.ReadAsStringAsync();
+
+            return JsonSerializer.Deserialize<CreatePullRequestResponse>(body, options);
+        }
+
+        internal async Task<CreatePullRequestThreadResponse> CreatePullRequestThread(string targetProjectSlug, Guid repoId, int pullRequestId, CreatePullRequestThreadRequest thread)
+        {
+            var jsonRequestBody = JsonSerializer.Serialize(thread, options);
+            logger.LogDebug(jsonRequestBody);
+
+            var response = await httpClient.PostAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests/{pullRequestId}/threads", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+            var body = await response.Content.ReadAsStringAsync();
+
+            return JsonSerializer.Deserialize<CreatePullRequestThreadResponse>(body, options);
+        }
+
+        internal async Task CreatePullRequestThreadComment(string targetProjectSlug, Guid repoId, int pullRequestId, int threadId, PullRequestThreadComment comment)
+        {
+            var jsonRequestBody = JsonSerializer.Serialize(comment, options);
+            var response = await httpClient.PostAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests/{pullRequestId}/threads/{threadId}/comments", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
         }
     }
 }
