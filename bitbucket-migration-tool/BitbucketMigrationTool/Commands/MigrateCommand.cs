@@ -13,7 +13,7 @@ using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
 
 namespace BitbucketMigrationTool.Commands
 {
-    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
+    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase,)]
     internal class MigrateCommand : CommandBase
     {
         private const string tempDir = "tempdir";
@@ -38,6 +38,12 @@ namespace BitbucketMigrationTool.Commands
 
         [Option("-s|--skip-if-target-exists", CommandOptionType.NoValue, Description = "Skip if target repository exists")]
         public bool SkipIfTargetExists { get; set; } = false;
+
+        [Option("-pr|--pull-requests", CommandOptionType.SingleValue, Description = "Migrate pull requests")]
+        public bool DoPullRequests { get; set; } = true;
+
+        [Option("-pc|--pull-request-comments", CommandOptionType.SingleValue, Description = "Migrate pull request comments")]
+        public bool DoPullRequestComments { get; set; } = true;
 
         private string TargetProjectSlug => $"{(TargetPrefix.HasValue ? $"{TargetPrefix.Value}-" : string.Empty)}{(TargetProject.HasValue ? TargetProject.Value : Project)}";
 
@@ -67,7 +73,10 @@ namespace BitbucketMigrationTool.Commands
                 logger.LogError($"Repository {Repository} not found");
                 return 1;
             }
-            var branches = await bitbucketClient.GetBranchesAsync(Project, repository.Slug);
+            var branches = (await bitbucketClient.GetBranchesAsync(Project, repository.Slug))
+                .Where(b => b.Default || Branches.Contains(b.DisplayId))
+                .OrderBy(b => b.Default ? 0 : 1)
+                .ToList();
             await EnsureAZDevopsProjectisCreated();
 
             var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug);
@@ -86,8 +95,10 @@ namespace BitbucketMigrationTool.Commands
                 await FixDefaultBranch(branches, targetRepository);
                 await DeleteFolder(tempDir);
             }
-
-            await HandlePullRequests(repository, targetRepository);
+            if (DoPullRequests)
+            {
+                await HandlePullRequests(repository, targetRepository, branches);
+            }
 
             return 0;
         }
@@ -137,10 +148,10 @@ namespace BitbucketMigrationTool.Commands
             await GitAction("push --tags", tempDir);
         }
 
-        private async Task HandlePullRequests(Repo repository, AZRepo repo)
+        private async Task HandlePullRequests(Repo repository, AZRepo repo, IEnumerable<Branch> branches)
         {
             var pullRequests = await bitbucketClient.GetPullRequests(Project, repository.Slug);
-            foreach (var pullRequest in pullRequests)
+            foreach (var pullRequest in pullRequests.Where(p => branches.Any(b => b.DisplayId == p.FromRef.DisplayId) && branches.Any(b => b.DisplayId == p.ToRef.DisplayId)))
             {
                 var response = await aZDevopsClient.CreatePullRequest(TargetProjectSlug, repo.Id, FromPullRequest(pullRequest));
 
@@ -151,15 +162,19 @@ namespace BitbucketMigrationTool.Commands
                     var thread = await aZDevopsClient.CreatePullRequestThread(TargetProjectSlug, repo.Id, response.PullRequestId, FromActivity(activity));
                     await ReplaceAttachments(repo.Id, response.PullRequestId, thread.Id, activity.Comment);
 
-                    foreach (var comment in activity.Comment.Comments)
+                    if (DoPullRequestComments)
                     {
-                        await ReplaceAttachments(repo.Id, response.PullRequestId, thread.Id, comment);
-                        await aZDevopsClient.CreatePullRequestThreadComment(TargetProjectSlug, repo.Id, response.PullRequestId, thread.Id, new PullRequestThreadComment
+                        foreach (var comment in activity.Comment.Comments)
                         {
-                            ParentCommentId = 1,
-                            Content = $"{comment.Author}: {comment.Text}"
-                        });
+                            await ReplaceAttachments(repo.Id, response.PullRequestId, thread.Id, comment);
+                            await aZDevopsClient.CreatePullRequestThreadComment(TargetProjectSlug, repo.Id, response.PullRequestId, thread.Id, new PullRequestThreadComment
+                            {
+                                ParentCommentId = 1,
+                                Content = $"{comment.Author}: {comment.Text}"
+                            });
+                        }
                     }
+
                 }
             }
         }
@@ -184,7 +199,7 @@ namespace BitbucketMigrationTool.Commands
 
         private async Task CheckoutBranches(IEnumerable<Branch> branches)
         {
-            foreach (var branch in branches.Where(b => b.Default || Branches.Contains(b.DisplayId)).OrderBy(b => b.Default ? 0 : 1))
+            foreach (var branch in branches)
             {
                 logger.LogInformation($"\t-> Found branch {branch.DisplayId}");
 
@@ -215,7 +230,7 @@ namespace BitbucketMigrationTool.Commands
         {
             return new CreatePullRequestThreadRequest
             {
-                Comments = new[] 
+                Comments = new[]
                 {
                     new PullRequestThreadComment
                     {
