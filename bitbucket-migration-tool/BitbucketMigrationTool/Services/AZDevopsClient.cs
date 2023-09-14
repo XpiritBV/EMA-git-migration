@@ -3,6 +3,7 @@ using BitbucketMigrationTool.Models.AzureDevops.General;
 using BitbucketMigrationTool.Models.AzureDevops.Repository;
 using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -110,6 +111,17 @@ namespace BitbucketMigrationTool.Services
         {
             var jsonRequestBody = JsonSerializer.Serialize(comment, options);
             var response = await httpClient.PostAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests/{pullRequestId}/threads/{threadId}/comments", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+        }
+
+        internal async Task<Attachment> UploadAttachment(string targetProjectSlug, Guid repoId, int pullRequestId, int threadId, string fileName, Stream fileContent)
+        {
+            var httpReq = new HttpRequestMessage(HttpMethod.Post, $"{targetProjectSlug}/_apis/git/repositories/{repoId}/pullrequests/{pullRequestId}/threads/{threadId}/attachments/fileName={fileName}");
+            httpReq.Content = new StreamContent(fileContent);
+            httpReq.Content.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+            var response = await httpClient.SendAsync(httpReq);
+
+            var body = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<Attachment>(body, options);
         }
     }
 }

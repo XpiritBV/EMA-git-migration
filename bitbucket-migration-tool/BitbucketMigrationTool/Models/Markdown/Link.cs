@@ -8,5 +8,10 @@
         }
 
         public bool IsAttachment => Target.StartsWith("attachment:");
+
+        public Link WithNewTarget(string newTarget)
+        {
+            return new Link(Text, newTarget);
+        }
     }
 }
