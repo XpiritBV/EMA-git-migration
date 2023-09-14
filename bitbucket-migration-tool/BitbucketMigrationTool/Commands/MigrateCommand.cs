@@ -147,21 +147,36 @@ namespace BitbucketMigrationTool.Commands
                 var activities = await bitbucketClient.GetPullRequestActivities(Project, repository.Slug, pullRequest.Id);
                 foreach (var activity in activities.Where(x => x.Action == ActivityActionType.COMMENTED).OrderBy(x => x.CreatedDate))
                 {
+
                     var thread = await aZDevopsClient.CreatePullRequestThread(TargetProjectSlug, repo.Id, response.PullRequestId, FromActivity(activity));
+                    await ReplaceAttachments(repo.Id, response.PullRequestId, thread.Id, activity.Comment);
 
                     foreach (var comment in activity.Comment.Comments)
                     {
+                        await ReplaceAttachments(repo.Id, response.PullRequestId, thread.Id, comment);
                         await aZDevopsClient.CreatePullRequestThreadComment(TargetProjectSlug, repo.Id, response.PullRequestId, thread.Id, new PullRequestThreadComment
                         {
                             ParentCommentId = 1,
                             Content = $"{comment.Author}: {comment.Text}"
                         });
                     }
+                }
+            }
+        }
 
-                    var links = ScanForLinks(activity.Comment.Text);
-                    foreach (var link in links)
+        private async Task ReplaceAttachments(Guid repoId, int prId, int threadId, Comment comment)
+        {
+            var links = ScanForLinks(comment.Text);
+            foreach (var link in links)
+            {
+                if (link.IsAttachment)
+                {
+                    var attachmentId = int.Parse(link.Target.Split('/').Last());
+                    var attachment = await bitbucketClient.GetAttachment(Project, Repository, attachmentId);
+                    if (attachment != null)
                     {
-                        logger.LogInformation($"\t\t\t-> Found link {link}, is an attachment: {link.IsAttachment}");
+                        var azAttachment = await aZDevopsClient.UploadAttachment(TargetProjectSlug, repoId, prId, threadId, link.Text.Replace(' ', '_'), attachment);
+                        comment.Text = comment.Text.Replace(link.ToString(), link.WithNewTarget(azAttachment.Url).ToString());
                     }
                 }
             }
