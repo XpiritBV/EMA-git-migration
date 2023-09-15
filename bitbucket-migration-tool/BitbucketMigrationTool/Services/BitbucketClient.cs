@@ -40,6 +40,13 @@ namespace BitbucketMigrationTool.Services
         public Task<Stream> GetAttachment(string projectKey, string repositorySlug, int attachmentId)
             => httpClient.GetStreamAsync($"projects/{projectKey}/repos/{repositorySlug}/attachments/{attachmentId}");
 
+        public Task<IEnumerable<UserPermission>> GetProjectPermissionsAsync(string projectKey, string type = "users")
+        => GetPagedResultAsync<UserPermission>($"projects/{projectKey}/permissions/{type}");
+
+        public Task<IEnumerable<UserPermission>> GetRepoPermissionsAsync(string projectKey, string repositorySlug, string type = "users")
+        => GetPagedResultAsync<UserPermission>($"projects/{projectKey}/repos/{repositorySlug}/permissions/{type}");
+
+
         private async Task<IEnumerable<T>> GetPagedResultAsync<T>(string url)
         {
             var start = 0;
@@ -55,7 +62,7 @@ namespace BitbucketMigrationTool.Services
                     var response = await httpClient.GetAsync(pagedUrl());
                     var body = await response.Content.ReadAsStringAsync();
 
-                    //logger.LogDebug(body);
+                    // logger.LogDebug(body);
 
                     var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
                     options.Converters.Add(new JsonStringEnumConverter());
