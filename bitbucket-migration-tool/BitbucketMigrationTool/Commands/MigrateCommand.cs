@@ -13,7 +13,7 @@ using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
 
 namespace BitbucketMigrationTool.Commands
 {
-    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase,)]
+    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
     internal class MigrateCommand : CommandBase
     {
         private const string tempDir = "tempdir";
