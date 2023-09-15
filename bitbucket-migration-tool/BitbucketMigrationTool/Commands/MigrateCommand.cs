@@ -18,10 +18,10 @@ namespace BitbucketMigrationTool.Commands
     {
         private const string tempDir = "tempdir";
 
-        [Option("-p|--project", CommandOptionType.SingleValue, Description = "* Project key")]
+        [Argument(0, nameof(Project), Description = "* Project key")]
         public string Project { get; set; }
 
-        [Option("-r|--repository", CommandOptionType.SingleValue, Description = "* Repository slug")]
+        [Argument(1, nameof(Repository), Description = "* Repository slug")]
         public string Repository { get; set; }
 
         [Option("-b|--branch", CommandOptionType.MultipleValue, Description = "[Aditional branches to migrate]")]
@@ -65,7 +65,7 @@ namespace BitbucketMigrationTool.Commands
                 return 1;
             }
             var branches = (await bitbucketClient.GetBranchesAsync(Project, repository.Slug))
-                .Where(b => b.Default || Branches.Contains(b.DisplayId))
+                .Where(b => b.Default || Branches.Contains(b.DisplayId) || b.DisplayId.Equals("main", StringComparison.InvariantCultureIgnoreCase) || b.DisplayId.Equals("master", StringComparison.InvariantCultureIgnoreCase))
                 .OrderBy(b => b.Default ? 0 : 1)
                 .ToList();
             await EnsureAZDevopsProjectisCreated();
