@@ -16,4 +16,10 @@
         }
     }
 
+
+    public class UserPermission
+    {
+        public User User { get; set; }
+        public string Permission { get; set; }
+    }
 }
