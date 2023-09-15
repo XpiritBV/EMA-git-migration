@@ -4,28 +4,27 @@ using McMaster.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace BitbucketMigrationTool.Commands
+namespace BitbucketMigrationTool.Commands.Test
 {
     [Command(Name = "largefile", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
-    [VersionOptionFromMember("--version", MemberName = nameof(GetVersion))]
     internal class LargeFileCommand : CommandBase
     {
 
-        public LargeFileCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
+        public LargeFileCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
             : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
 
-        [Option("-s|--size", CommandOptionType.SingleValue, Description = "Size in B")]
+        [Option("-s|--size", CommandOptionType.SingleValue, Description = "[Size in B]")]
         public long Size { get; set; } = 0;
 
-        [Option("-sp|--skip-projects", CommandOptionType.SingleValue, Description = "Projects To Skip")]
+        [Option("-sp|--skip-projects", CommandOptionType.SingleValue, Description = "[Projects To Skip]")]
         public string SkipProjects { get; set; } = string.Empty;
 
-        [Option("-sr|--skip-repositories", CommandOptionType.SingleValue, Description = "Repositories To Skip")]
+        [Option("-sr|--skip-repositories", CommandOptionType.SingleValue, Description = "[Repositories To Skip]")]
         public string SkipRepositories { get; set; } = string.Empty;
 
-        [Option("-c|--continue", CommandOptionType.SingleValue, Description = "Continue after interuption")]
+        [Option("-c|--continue", CommandOptionType.SingleValue, Description = "[Continue after interuption]")]
         public bool Continue { get; set; } = true;
 
         protected override async Task<int> OnExecute(CommandLineApplication app)

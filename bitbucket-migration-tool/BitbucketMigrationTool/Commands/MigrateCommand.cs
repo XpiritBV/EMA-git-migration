@@ -13,36 +13,36 @@ using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
 
 namespace BitbucketMigrationTool.Commands
 {
-    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase,)]
+    [Command(Name = "migrate", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
     internal class MigrateCommand : CommandBase
     {
         private const string tempDir = "tempdir";
 
-        [Option("-p|--project", CommandOptionType.SingleValue, Description = "Project key")]
+        [Option("-p|--project", CommandOptionType.SingleValue, Description = "* Project key")]
         public string Project { get; set; }
 
-        [Option("-r|--repository", CommandOptionType.SingleValue, Description = "Repository slug")]
+        [Option("-r|--repository", CommandOptionType.SingleValue, Description = "* Repository slug")]
         public string Repository { get; set; }
 
-        [Option("-b|--branch", CommandOptionType.MultipleValue, Description = "Aditional branches to migrate")]
+        [Option("-b|--branch", CommandOptionType.MultipleValue, Description = "[Aditional branches to migrate]")]
         public string[] Branches { get; set; } = Array.Empty<string>();
 
-        [Option("-tp|--target-prefix", CommandOptionType.SingleOrNoValue, Description = "Prefix for target project")]
+        [Option("-tp|--target-prefix", CommandOptionType.SingleOrNoValue, Description = "[Prefix for target project]")]
         public (bool HasValue, string Value) TargetPrefix { get; set; }
 
-        [Option("-t|--target", CommandOptionType.SingleOrNoValue, Description = "Target project slug")]
+        [Option("-t|--target", CommandOptionType.SingleOrNoValue, Description = "[Target project slug]")]
         public (bool HasValue, string Value) TargetProject { get; set; }
 
-        [Option("-tr|--target-repository", CommandOptionType.SingleOrNoValue, Description = "Target repository slug")]
+        [Option("-tr|--target-repository", CommandOptionType.SingleOrNoValue, Description = "[Target repository slug]")]
         public (bool HasValue, string Value) TargetRepository { get; set; }
 
-        [Option("-s|--skip-if-target-exists", CommandOptionType.NoValue, Description = "Skip if target repository exists")]
+        [Option("-s|--skip-if-target-exists", CommandOptionType.NoValue, Description = "[Skip if target repository exists]")]
         public bool SkipIfTargetExists { get; set; } = false;
 
-        [Option("-pr|--pull-requests", CommandOptionType.SingleValue, Description = "Migrate pull requests")]
+        [Option("-pr|--pull-requests", CommandOptionType.SingleValue, Description = "[Migrate pull requests]")]
         public bool DoPullRequests { get; set; } = true;
 
-        [Option("-pc|--pull-request-comments", CommandOptionType.SingleValue, Description = "Migrate pull request comments")]
+        [Option("-pc|--pull-request-comments", CommandOptionType.SingleValue, Description = "[Migrate pull request comments]")]
         public bool DoPullRequestComments { get; set; } = true;
 
         private string TargetProjectSlug => $"{(TargetPrefix.HasValue ? $"{TargetPrefix.Value}-" : string.Empty)}{(TargetProject.HasValue ? TargetProject.Value : Project)}";
@@ -53,15 +53,6 @@ namespace BitbucketMigrationTool.Commands
             : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
-
-        /*
-            Create project if not exists (Original name or new name)
-	            Create repository if not exists (Original name or new name)
-		            Create branches if not exist, full history
-		            Create PR if not exists and if necessary (author!)
-			            Create Comment if not exists (author!)
-			            Create Attachment if not exists and if necessary
-        */
 
         protected override async Task<int> OnExecute(CommandLineApplication app)
         {
