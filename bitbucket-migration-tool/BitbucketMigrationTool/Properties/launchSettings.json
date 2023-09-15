@@ -2,7 +2,7 @@
   "profiles": {
     "BitbucketMigrationTool": {
       "commandName": "Project",
-      "commandLineArgs": "migrate -tp:TMP -b:feature/newdocs MIG workrepo"
+      "commandLineArgs": "migrate MIG workrepo -tp:TMP -b:feature/newdocs "
     }
   }
 }
