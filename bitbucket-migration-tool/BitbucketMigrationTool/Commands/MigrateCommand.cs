@@ -10,6 +10,7 @@ using MarkdownLink = BitbucketMigrationTool.Models.Markdown.Link;
 using AZRepo = BitbucketMigrationTool.Models.AzureDevops.Repository.Repo;
 using AZPullRequest = BitbucketMigrationTool.Models.AzureDevops.Repository.CreatePullRequest;
 using BitbucketMigrationTool.Models.AzureDevops.Repository.Threads;
+using BitbucketMigrationTool.Models.Bitbucket.General;
 
 namespace BitbucketMigrationTool.Commands
 {
@@ -70,6 +71,22 @@ namespace BitbucketMigrationTool.Commands
                 .ToList();
             await EnsureAZDevopsProjectisCreated();
 
+            var userPermissions = await bitbucketClient.GetRepoPermissionsAsync(Project, repository.Slug);
+
+            try
+            {
+                logger.LogInformation("-- PERMISSIONS --");
+
+                foreach (var userPermission in userPermissions)
+                {
+                    logger.LogInformation($"{userPermission.User}: {userPermission.Permission}");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "could not read permissions");
+            }
+            
             var targetRepository = await aZDevopsClient.GetRepositoryAsync(TargetProjectSlug, TargetRepositorySlug);
             var repositoryExists = targetRepository != null;
 
