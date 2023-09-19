@@ -46,6 +46,11 @@ namespace BitbucketMigrationTool.Services
         public Task<IEnumerable<UserPermission>> GetRepoPermissionsAsync(string projectKey, string repositorySlug, string type = "users")
         => GetPagedResultAsync<UserPermission>($"projects/{projectKey}/repos/{repositorySlug}/permissions/{type}");
 
+        public Task SetRepositoryPermission(string projectKey, string repositorySlug, string name, string permission = "REPO_READ", string type = "users")
+        {
+            var request = new HttpRequestMessage(HttpMethod.Put, $"{projectKey}/repos/{repositorySlug}/permissions/{type}?name={name}&permission={permission}");
+            return httpClient.SendAsync(request);
+        }
 
         private async Task<IEnumerable<T>> GetPagedResultAsync<T>(string url)
         {
