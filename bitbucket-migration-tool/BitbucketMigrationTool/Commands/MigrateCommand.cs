@@ -80,6 +80,8 @@ namespace BitbucketMigrationTool.Commands
                 foreach (var userPermission in userPermissions)
                 {
                     logger.LogInformation($"{userPermission.User}: {userPermission.Permission}");
+
+                    await bitbucketClient.SetRepositoryPermission(TargetProjectSlug, TargetRepositorySlug, userPermission.User.Name);
                 }
             }
             catch (Exception ex)
