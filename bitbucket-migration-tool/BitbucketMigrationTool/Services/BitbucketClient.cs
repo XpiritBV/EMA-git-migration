@@ -48,7 +48,13 @@ namespace BitbucketMigrationTool.Services
 
         public Task SetRepositoryPermission(string projectKey, string repositorySlug, string name, string permission = "REPO_READ", string type = "users")
         {
-            var request = new HttpRequestMessage(HttpMethod.Put, $"{projectKey}/repos/{repositorySlug}/permissions/{type}?name={name}&permission={permission}");
+            var request = new HttpRequestMessage(HttpMethod.Put, $"projects/{projectKey}/repos/{repositorySlug}/permissions/{type}?name={name}&permission={permission}");
+            return httpClient.SendAsync(request);
+        }
+
+        public Task SetProjectPermission(string projectKey, string name, string permission = "PROJECT_READ", string type = "users")
+        {
+            var request = new HttpRequestMessage(HttpMethod.Put, $"projects/{projectKey}/permissions/{type}?name={name}&permission={permission}");
             return httpClient.SendAsync(request);
         }
 
