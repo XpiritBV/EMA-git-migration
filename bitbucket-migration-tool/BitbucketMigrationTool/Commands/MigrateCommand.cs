@@ -55,6 +55,10 @@ namespace BitbucketMigrationTool.Commands
         {
         }
 
+        // TODO: check if rate limit is reached
+        // TODO: precreate projects
+        // TODO: Check rewrite of tags
+
         protected override async Task<int> OnExecute(CommandLineApplication app)
         {
             await DeleteFolder(tempDir);
