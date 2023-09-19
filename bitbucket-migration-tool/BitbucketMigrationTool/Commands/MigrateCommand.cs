@@ -71,17 +71,28 @@ namespace BitbucketMigrationTool.Commands
                 .ToList();
             await EnsureAZDevopsProjectisCreated();
 
-            var userPermissions = await bitbucketClient.GetRepoPermissionsAsync(Project, repository.Slug);
 
             try
             {
-                logger.LogInformation("-- PERMISSIONS --");
+                var userPermissions = await bitbucketClient.GetRepoPermissionsAsync(Project, repository.Slug);
+                var projectPermissions = await bitbucketClient.GetProjectPermissionsAsync(Project);
+
+                logger.LogInformation("-- PERMISSIONS Repos --");
 
                 foreach (var userPermission in userPermissions)
                 {
                     logger.LogInformation($"{userPermission.User}: {userPermission.Permission}");
 
-                    await bitbucketClient.SetRepositoryPermission(TargetProjectSlug, TargetRepositorySlug, userPermission.User.Name);
+                    await bitbucketClient.SetRepositoryPermission(Project, repository.Slug, userPermission.User.Name);
+                }
+
+                logger.LogInformation("-- PERMISSIONS Project --");
+
+                foreach (var projectPermission in projectPermissions)
+                {
+                    logger.LogInformation($"{projectPermission.User}: {projectPermission.Permission}");
+
+                    await bitbucketClient.SetProjectPermission(Project, projectPermission.User.Name);
                 }
             }
             catch (Exception ex)

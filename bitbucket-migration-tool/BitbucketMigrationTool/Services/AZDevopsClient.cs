@@ -34,7 +34,7 @@ namespace BitbucketMigrationTool.Services
 
         public async Task<Repo?> GetRepositoryAsync(string projectKey, string repoKey)
         {
-            var response = await httpClient.GetAsync($"${projectKey}/_apis/git/repositories/${repoKey}");
+            var response = await httpClient.GetAsync($"{projectKey}/_apis/git/repositories/{repoKey}");
 
             if (response.IsSuccessStatusCode)
             {
