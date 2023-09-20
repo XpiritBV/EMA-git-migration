@@ -52,6 +52,15 @@ var builder = new HostBuilder()
                 client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
                 client.DefaultRequestHeaders.Add("Accept", $"application/json; api-version={azdevopsConfig.ApiVersion}");
             });
+
+            services.AddHttpClient<AzDoGraphClient>(client =>
+            {
+                var azdevopsConfig = configuration.GetSection("AzureDevopsGraph").Get<RepositoryConfig>();
+                client.BaseAddress = new Uri($"{azdevopsConfig.Url}/");
+                var credentials = Convert.ToBase64String(Encoding.ASCII.GetBytes($":{azdevopsConfig.Key}"));
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {credentials}");
+                client.DefaultRequestHeaders.Add("Accept", $"application/json; api-version={azdevopsConfig.ApiVersion}");
+            });
         });
 
 try
