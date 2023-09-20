@@ -1,4 +1,5 @@
 ﻿using BitbucketMigrationTool.Commands.Test.Azdo;
+using BitbucketMigrationTool.Commands.Test.Azdo.Graph;
 using BitbucketMigrationTool.Commands.Test.Bitbucket;
 using BitbucketMigrationTool.Models;
 using BitbucketMigrationTool.Services;
@@ -27,10 +28,10 @@ namespace BitbucketMigrationTool.Commands.Test
     }
 
     [Command(Name = "azdo", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
-    [Subcommand(typeof(AzDoProjectCommand))]
+    [Subcommand(typeof(AzDoProjectCommand), typeof(AzDoProjectsCommand), typeof(AzDoGraphCommand))]
     internal class AzDoCommand : CommandBase
     {
-        public AzDoCommand(ILogger<AzDoCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
+        public AzDoCommand(ILogger<AzDoCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, azdevopsClient)
         {
         }
     }
