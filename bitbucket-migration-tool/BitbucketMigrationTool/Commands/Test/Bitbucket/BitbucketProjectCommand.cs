@@ -9,7 +9,7 @@ namespace BitbucketMigrationTool.Commands.Test.Bitbucket
     [Command(Name = "project", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
     internal class BitbucketProjectCommand : CommandBase
     {
-        public BitbucketProjectCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
+        public BitbucketProjectCommand(ILogger<BitbucketProjectCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
         {
         }
 

@@ -10,7 +10,7 @@ namespace BitbucketMigrationTool.Commands.Test.Azdo
     internal class AzDoProjectsCommand : CommandBase
     {
 
-        public AzDoProjectsCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
+        public AzDoProjectsCommand(ILogger<AzDoProjectsCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
         {
         }
 

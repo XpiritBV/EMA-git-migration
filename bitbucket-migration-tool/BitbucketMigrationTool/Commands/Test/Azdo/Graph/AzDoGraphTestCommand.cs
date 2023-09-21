@@ -12,7 +12,7 @@ namespace BitbucketMigrationTool.Commands.Test.Azdo.Graph
     internal class AzDoGraphTestCommand : CommandBase
     {
 
-        public AzDoGraphTestCommand(ILogger<AzDoGraphCommand> logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient) : base(logger, appSettingsOptions, azDoGraphClient)
+        public AzDoGraphTestCommand(ILogger<AzDoGraphTestCommand> logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient) : base(logger, appSettingsOptions, azDoGraphClient)
         {
         }
 
