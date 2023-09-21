@@ -13,7 +13,7 @@ namespace BitbucketMigrationTool.Commands.Test.Azdo
         [Argument(0, nameof(Project), Description = "* Project key")]
         public string Project { get; set; }
 
-        public AzDoProjectCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, azdevopsClient)
+        public AzDoProjectCommand(ILogger<AzDoProjectCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, azdevopsClient)
         {
         }
 

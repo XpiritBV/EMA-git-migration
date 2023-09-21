@@ -11,7 +11,7 @@ namespace BitbucketMigrationTool.Commands
     [Subcommand(typeof(MigrateCommand), typeof(TestCommand))]
     internal class DummyCommand : CommandBase
     {
-        public DummyCommand(ILogger<CommandBase> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
+        public DummyCommand(ILogger<DummyCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
             : base(logger, appSettingsOptions, bitbucketClient, aZDevopsClient)
         {
         }
