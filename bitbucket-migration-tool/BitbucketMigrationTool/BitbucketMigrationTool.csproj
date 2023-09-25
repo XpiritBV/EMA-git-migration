@@ -6,6 +6,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<RuntimeIdentifier>win7-x64</RuntimeIdentifier>
+		<RuntimeIdentifier>linux-x64</RuntimeIdentifier>
 		<LangVersion>latest</LangVersion>
 		<AssemblyName>bitbucketmigrationtool</AssemblyName>
 	  <UserSecretsId>0244a984-9ca1-478a-be0b-8de81c9a70cb</UserSecretsId>

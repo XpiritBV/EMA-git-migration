@@ -8,7 +8,11 @@ using Microsoft.Extensions.Options;
 namespace BitbucketMigrationTool.Commands
 {
     [Command(Name = "bitbucketmigration", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
-    [Subcommand(typeof(MigrateCommand), typeof(TestCommand))]
+    [Subcommand(typeof(MigrateCommand)
+#if DEBUG
+        , typeof(TestCommand)
+#endif
+    )]
     internal class DummyCommand : CommandBase
     {
         public DummyCommand(ILogger<CommandBase> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient) 
