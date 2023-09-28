@@ -64,6 +64,14 @@ namespace BitbucketMigrationTool.Commands
             string permissionsProjectFilenName = $"permissions-project-{Project}-{Repository}.csv";
             string permissionsRepoFilenName = $"permissions-repo-{Project}-{Repository}.csv";
 
+            if (!string.IsNullOrEmpty(appSettings.ReportingPath))
+            {
+                Directory.CreateDirectory(appSettings.ReportingPath);
+
+                permissionsProjectFilenName = Path.Combine(appSettings.ReportingPath, permissionsProjectFilenName);
+                permissionsRepoFilenName = Path.Combine(appSettings.ReportingPath, permissionsRepoFilenName);
+            }
+
             await Console.Out.WriteLineAsync($"Delete output files");
             await DeleteFolder(tempDir);
             File.Delete(permissionsProjectFilenName);
@@ -87,8 +95,8 @@ namespace BitbucketMigrationTool.Commands
                 var userPermissions = await bitbucketClient.GetRepoPermissionsAsync(Project, repository.Slug);
                 var projectPermissions = await bitbucketClient.GetProjectPermissionsAsync(Project);
 
-                await File.AppendAllLinesAsync(permissionsProjectFilenName, projectPermissions.Select(s => $"{s.User}: {s.Permission}"));
-                await File.AppendAllLinesAsync(permissionsRepoFilenName, userPermissions.Select(s => $"{s.User}: {s.Permission}"));
+                await File.AppendAllLinesAsync(permissionsProjectFilenName, projectPermissions.Select(s => $"{s.User};{s.Permission}"));
+                await File.AppendAllLinesAsync(permissionsRepoFilenName, userPermissions.Select(s => $"{s.User};{s.Permission}"));
 
 
                 logger.LogInformation($"-- PERMISSIONS Project {Project} --");
