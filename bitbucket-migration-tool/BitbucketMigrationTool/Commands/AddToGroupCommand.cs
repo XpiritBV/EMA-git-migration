@@ -17,6 +17,12 @@ namespace BitbucketMigrationTool.Commands
         [Argument(0, nameof(Project), Description = "* Project key")]
         public string Project { get; set; }
 
+        [Argument(1, nameof(Project), Description = "* AAD id for the admin group")]
+        public string AdminGroupId { get; set; }
+
+        [Argument(2, nameof(Project), Description = "* AAD id for the team group")]
+        public string TeamGroupId { get; set; }
+
         public AddToGroupCommand(ILogger<AddToGroupCommand> logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient, AZDevopsClient devopsClient)
             : base(logger, appSettingsOptions)
         {
@@ -35,6 +41,8 @@ namespace BitbucketMigrationTool.Commands
 
             var groups = await FindGroups();
 
+            await azDoGraphClient.AddToGroup(groups.Admin, AdminGroupId);
+            await azDoGraphClient.AddToGroup(groups.Team, TeamGroupId);
             
             return 0;
         }
