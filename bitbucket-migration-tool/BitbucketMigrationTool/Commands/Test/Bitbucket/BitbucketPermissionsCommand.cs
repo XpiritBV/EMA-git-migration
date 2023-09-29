@@ -9,7 +9,7 @@ namespace BitbucketMigrationTool.Commands.Test.Bitbucket
     [Command(Name = "permissions", OptionsComparison = StringComparison.InvariantCultureIgnoreCase)]
     internal class BitbucketPermissionsCommand : CommandBase
     {
-        public BitbucketPermissionsCommand(ILogger<LargeFileCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
+        public BitbucketPermissionsCommand(ILogger<BitbucketPermissionsCommand> logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient azdevopsClient) : base(logger, appSettingsOptions, bitbucketClient, azdevopsClient)
         {
         }
 

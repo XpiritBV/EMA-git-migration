@@ -14,16 +14,40 @@ namespace BitbucketMigrationTool.Commands
     {
         internal readonly ILogger logger;
         internal readonly AppSettings appSettings;
-        internal readonly BitbucketClient bitbucketClient;
-        internal readonly AZDevopsClient aZDevopsClient;
+        internal readonly BitbucketClient? bitbucketClient;
+        internal readonly AZDevopsClient? aZDevopsClient;
+        internal readonly AzDoGraphClient? azDoGraphClient;
 
-
-        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions) 
         {
             this.logger = logger;
             this.appSettings = appSettingsOptions.Value;
+        }
+
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
+            : this(logger, appSettingsOptions)
+        {
             this.bitbucketClient = bitbucketClient;
             this.aZDevopsClient = aZDevopsClient;
+        }
+
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient aZDevopsClient)
+            : this(logger, appSettingsOptions)
+        {
+            this.aZDevopsClient = aZDevopsClient;
+        }
+
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient)
+            : this(logger, appSettingsOptions)
+        {
+            this.azDoGraphClient = azDoGraphClient;
+        }
+
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient aZDevopsClient, AzDoGraphClient azDoGraphClient)
+            : this(logger, appSettingsOptions)
+        {
+            this.aZDevopsClient = aZDevopsClient;
+            this.azDoGraphClient = azDoGraphClient;
         }
 
         protected virtual Task<int> OnExecute(CommandLineApplication app)

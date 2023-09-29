@@ -32,6 +32,15 @@ namespace BitbucketMigrationTool.Services
             return result.Value;
         }
 
+        public async Task<Project> GetProjectAsync(string projectKey)
+        {
+            var response = await httpClient.GetAsync($"_apis/projects/{projectKey}");
+            var body = await response.Content.ReadAsStringAsync();
+
+            var result = JsonSerializer.Deserialize<Project>(body, options);
+            return result;
+        }
+
         public async Task<Repo?> GetRepositoryAsync(string projectKey, string repoKey)
         {
             var response = await httpClient.GetAsync($"{projectKey}/_apis/git/repositories/{repoKey}");
