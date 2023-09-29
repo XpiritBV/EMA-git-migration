@@ -12,6 +12,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Threading.Tasks;
 using BitbucketMigrationTool.Models.AzureDevops.Graph;
+using BitbucketMigrationTool.Models.Bitbucket.General;
 
 namespace BitbucketMigrationTool.Services
 {
@@ -64,20 +65,49 @@ namespace BitbucketMigrationTool.Services
             } while (!string.IsNullOrEmpty(token));
         }
 
-        public async Task AddToGroup(GraphGroup group, string aadId)
+        public async Task AddToGroup(GraphGroup? group, string aadId)
         {
             var jsonRequestBody = JsonSerializer.Serialize(new
             {
                 OriginId = aadId,
             }, options);
 
-            var response = await httpClient.PostAsync($"_apis/graph/groups?groupDescriptors={group.Descriptor}", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+            if (!string.IsNullOrEmpty(group?.Descriptor))
+            {
+                var response = await httpClient.PostAsync($"_apis/graph/groups?groupDescriptors={group.Descriptor}", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
 
-            if (!response.IsSuccessStatusCode)
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync();
+                    logger.LogError($"Failed to add aad group {aadId} to group {group.PrincipalName} - {body}");
+                }
+            }else
+                logger.LogError($"Failed to add aad ({aadId}) to group");
+
+        }
+
+        public async Task<GraphGroup?> GetGroupAsync(string projectKey, string group)
+        {
+
+            var query = $"[{projectKey}]\\{group}";
+
+            var jsonRequestBody = JsonSerializer.Serialize(new
+            {
+                Query = query,
+                SubjectKind = new string[] { "Group" }
+
+            }, options);
+
+            var response = await httpClient.PostAsync($"_apis/graph/subjectquery", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
+
+            if (response.IsSuccessStatusCode)
             {
                 var body = await response.Content.ReadAsStringAsync();
-                logger.LogError($"Failed to add aad group {aadId} to group {group.PrincipalName} - {body}");
+                var result = JsonSerializer.Deserialize<ListResponse<GraphGroup>>(body, options);
+                return result?.Value.FirstOrDefault();
             }
+            logger.LogError($"Failed to get group ({query}) info ");
+            return null;
         }
     }
 }

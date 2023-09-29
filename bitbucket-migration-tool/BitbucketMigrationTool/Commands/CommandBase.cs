@@ -43,6 +43,13 @@ namespace BitbucketMigrationTool.Commands
             this.azDoGraphClient = azDoGraphClient;
         }
 
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient aZDevopsClient, AzDoGraphClient azDoGraphClient)
+            : this(logger, appSettingsOptions)
+        {
+            this.aZDevopsClient = aZDevopsClient;
+            this.azDoGraphClient = azDoGraphClient;
+        }
+
         protected virtual Task<int> OnExecute(CommandLineApplication app)
         {
             app.ShowHelp();

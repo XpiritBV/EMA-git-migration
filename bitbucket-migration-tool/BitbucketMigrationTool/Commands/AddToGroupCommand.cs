@@ -11,9 +11,6 @@ namespace BitbucketMigrationTool.Commands
     [Command(Name = "addtogroup", OptionsComparison = StringComparison.InvariantCultureIgnoreCase, Description = "Add AAD groups to the Azure devops groups")]
     internal class AddToGroupCommand : CommandBase
     {
-        private readonly AzDoGraphClient azDoGraphClient;
-        private readonly AZDevopsClient devopsClient;
-
         [Argument(0, nameof(Project), Description = "* Project key")]
         public string Project { get; set; }
 
@@ -23,16 +20,14 @@ namespace BitbucketMigrationTool.Commands
         [Argument(2, nameof(Project), Description = "* AAD id for the team group")]
         public string TeamGroupId { get; set; }
 
-        public AddToGroupCommand(ILogger<AddToGroupCommand> logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient, AZDevopsClient devopsClient)
-            : base(logger, appSettingsOptions)
+        public AddToGroupCommand(ILogger<AddToGroupCommand> logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient devopsClient, AzDoGraphClient azDoGraphClient)
+            : base(logger, appSettingsOptions, devopsClient, azDoGraphClient)
         {
-            this.azDoGraphClient = azDoGraphClient;
-            this.devopsClient = devopsClient;
         }
 
         protected override async Task<int> OnExecute(CommandLineApplication app)
         {
-            var project = await devopsClient.GetProjectAsync(Project);
+            var project = await aZDevopsClient.GetProjectAsync(Project);
             if (project == null)
             {
                 logger.LogError($"Project {Project} not found");
@@ -41,38 +36,30 @@ namespace BitbucketMigrationTool.Commands
 
             var groups = await FindGroups();
 
-            await azDoGraphClient.AddToGroup(groups.Admin, AdminGroupId);
-            await azDoGraphClient.AddToGroup(groups.Team, TeamGroupId);
-            
+            if (!string.IsNullOrEmpty(groups.Admin?.Descriptor))
+            {
+                await azDoGraphClient.AddToGroup(groups.Admin, AdminGroupId);
+            }
+            else
+            {
+                logger.LogError($"Group 'Project Administrators' not found");
+            }
+            if (!string.IsNullOrEmpty(groups.Team?.Descriptor))
+            {
+                await azDoGraphClient.AddToGroup(groups.Team, TeamGroupId);
+            }
+            else
+            {
+                logger.LogError($"Group '{Project} Team' not found");
+            }
+
             return 0;
         }
 
-        private async Task<(GraphGroup Admin, GraphGroup Team)> FindGroups()
+        private async Task<(GraphGroup? Admin, GraphGroup? Team)> FindGroups()
         {
-            GraphGroup teamGroup = null;
-            GraphGroup adminGroup = null;
-
-            await foreach (var group in azDoGraphClient.GetGroupsAsync())
-            {
-                if (!group.PrincipalName.Contains(Project))
-                    continue;
-
-
-                if (group.PrincipalName.Contains("Project Administrators"))
-                {
-                    adminGroup = group;
-                }
-                else if (group.PrincipalName.Contains("Team"))
-                {
-                    teamGroup = group;
-                }
-
-                if (teamGroup != null && adminGroup != null)
-                {
-                    break;
-                }
-            }
-
+            GraphGroup? teamGroup = await azDoGraphClient.GetGroupAsync(Project, $"{Project} Team");
+            GraphGroup? adminGroup = await azDoGraphClient.GetGroupAsync(Project, $"Project Administrators");
             return (adminGroup, teamGroup);
         }
 
