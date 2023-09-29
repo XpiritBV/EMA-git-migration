@@ -18,26 +18,28 @@ namespace BitbucketMigrationTool.Commands
         internal readonly AZDevopsClient? aZDevopsClient;
         internal readonly AzDoGraphClient? azDoGraphClient;
 
-
-        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions) 
         {
             this.logger = logger;
             this.appSettings = appSettingsOptions.Value;
+        }
+
+        public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, BitbucketClient bitbucketClient, AZDevopsClient aZDevopsClient)
+            : this(logger, appSettingsOptions)
+        {
             this.bitbucketClient = bitbucketClient;
             this.aZDevopsClient = aZDevopsClient;
         }
 
         public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient aZDevopsClient)
+            : this(logger, appSettingsOptions)
         {
-            this.logger = logger;
-            this.appSettings = appSettingsOptions.Value;
             this.aZDevopsClient = aZDevopsClient;
         }
 
         public CommandBase(ILogger logger, IOptions<AppSettings> appSettingsOptions, AzDoGraphClient azDoGraphClient)
+            : this(logger, appSettingsOptions)
         {
-            this.logger = logger;
-            this.appSettings = appSettingsOptions.Value;
             this.azDoGraphClient = azDoGraphClient;
         }
 
