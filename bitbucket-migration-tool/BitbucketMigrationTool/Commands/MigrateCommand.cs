@@ -61,7 +61,21 @@ namespace BitbucketMigrationTool.Commands
 
         protected override async Task<int> OnExecute(CommandLineApplication app)
         {
+            string permissionsProjectFilenName = $"permissions-project-{Project}-{Repository}.csv";
+            string permissionsRepoFilenName = $"permissions-repo-{Project}-{Repository}.csv";
+
+            if (!string.IsNullOrEmpty(appSettings.ReportingPath))
+            {
+                Directory.CreateDirectory(appSettings.ReportingPath);
+
+                permissionsProjectFilenName = Path.Combine(appSettings.ReportingPath, permissionsProjectFilenName);
+                permissionsRepoFilenName = Path.Combine(appSettings.ReportingPath, permissionsRepoFilenName);
+            }
+
+            await Console.Out.WriteLineAsync($"Delete output files");
             await DeleteFolder(tempDir);
+            File.Delete(permissionsProjectFilenName);
+            File.Delete(permissionsRepoFilenName);
 
             var repository = await bitbucketClient.GetRepositoryAsync(Project, Repository);
             if (repository == null)
@@ -81,23 +95,30 @@ namespace BitbucketMigrationTool.Commands
                 var userPermissions = await bitbucketClient.GetRepoPermissionsAsync(Project, repository.Slug);
                 var projectPermissions = await bitbucketClient.GetProjectPermissionsAsync(Project);
 
-                logger.LogInformation("-- PERMISSIONS Repos --");
+                await File.AppendAllLinesAsync(permissionsProjectFilenName, projectPermissions.Select(s => $"{s.User};{s.Permission}"));
+                await File.AppendAllLinesAsync(permissionsRepoFilenName, userPermissions.Select(s => $"{s.User};{s.Permission}"));
 
-                foreach (var userPermission in userPermissions)
-                {
-                    logger.LogInformation($"{userPermission.User}: {userPermission.Permission}");
 
-                    await bitbucketClient.SetRepositoryPermission(Project, repository.Slug, userPermission.User.Name);
-                }
-
-                logger.LogInformation("-- PERMISSIONS Project --");
+                logger.LogInformation($"-- PERMISSIONS Project {Project} --");
 
                 foreach (var projectPermission in projectPermissions)
                 {
                     logger.LogInformation($"{projectPermission.User}: {projectPermission.Permission}");
 
-                    await bitbucketClient.SetProjectPermission(Project, projectPermission.User.Name);
+                    if (!TargetPrefix.HasValue)
+                        await bitbucketClient.SetProjectPermission(Project, projectPermission.User.Name);
                 }
+
+                logger.LogInformation($"-- PERMISSIONS Repos {Repository} --");
+
+                foreach (var userPermission in userPermissions)
+                {
+                    logger.LogInformation($"{userPermission.User}: {userPermission.Permission}");
+
+                    if (!TargetPrefix.HasValue)
+                        await bitbucketClient.SetRepositoryPermission(Project, repository.Slug, userPermission.User.Name);
+                }
+
             }
             catch (Exception ex)
             {
