@@ -11,6 +11,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Threading.Tasks;
+using BitbucketMigrationTool.Models.AzureDevops.Graph;
 
 namespace BitbucketMigrationTool.Services
 {
@@ -43,51 +44,40 @@ namespace BitbucketMigrationTool.Services
             //return result.Value;
         }
 
+        public async IAsyncEnumerable<GraphGroup> GetGroupsAsync()
+        {
+            var token = string.Empty;
 
-        //public async Task<IEnumerable<string>> GetGroupsAsync()
-        //{
-        //    var response = await httpClient.GetAsync("_apis/graph/groups");
-        //    var body = await response.Content.ReadAsStringAsync();
+            do
+            {
+                var path = string.IsNullOrEmpty(token) ? "_apis/graph/groups" : $"_apis/graph/groups?continuationToken={token}";
+                var response = await httpClient.GetAsync(path);
+                var body = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ListResponse<GraphGroup>>(body, options);
+                token = response.Headers.GetValues("x-ms-continuationtoken").FirstOrDefault();
 
-        //    return Enumerable.Empty<string>();
+                foreach (var group in result.Value)
+                {
+                    yield return group;
+                }
 
-        //    //var result = JsonSerializer.Deserialize<ListResponse<Project>>(body, options);
-        //    //return result.Value;
-        //}
+            } while (!string.IsNullOrEmpty(token));
+        }
 
-        //public async Task<Repo?> GetRepositoryAsync(string projectKey, string repoKey)
-        //{
-        //    var response = await httpClient.GetAsync($"{projectKey}/_apis/git/repositories/{repoKey}");
+        public async Task AddToGroup(GraphGroup group, string aadId)
+        {
+            var jsonRequestBody = JsonSerializer.Serialize(new
+            {
+                OriginId = aadId,
+            }, options);
 
-        //    if (response.IsSuccessStatusCode)
-        //    {
-        //        var body = await response.Content.ReadAsStringAsync();
-        //        return JsonSerializer.Deserialize<Repo>(body, options);
-        //    }
-        //    return null;
-        //}
+            var response = await httpClient.PostAsync($"_apis/graph/groups?groupDescriptors={group.Descriptor}", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
 
-        //public async Task<OperationLink?> CreateProjectAsync(CreateProjectRequest createProjectRequest)
-        //{
-        //    var jsonRequestBody = JsonSerializer.Serialize(createProjectRequest, options);
-        //    var response = await httpClient.PostAsync("_apis/projects", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
-
-        //    if (response.IsSuccessStatusCode)
-        //    {
-        //        var body = await response.Content.ReadAsStringAsync();
-        //        return JsonSerializer.Deserialize<OperationLink>(body, options);
-        //    }
-        //    return null;
-        //}
-
-        //internal Task SetMainBranch(string targetProjectSlug, Guid repoId, string branchName)
-        //{
-        //    var jsonRequestBody = JsonSerializer.Serialize(new
-        //    {
-        //        DefaultBranch = $"refs/heads/{branchName}"
-        //    }, options);
-
-        //    return httpClient.PatchAsync($"{targetProjectSlug}/_apis/git/repositories/{repoId}", new StringContent(jsonRequestBody, Encoding.UTF8, "application/json"));
-        //}
+            if (!response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                logger.LogError($"Failed to add aad group {aadId} to group {group.PrincipalName} - {body}");
+            }
+        }
     }
 }
