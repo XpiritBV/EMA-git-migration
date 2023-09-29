@@ -14,10 +14,10 @@ namespace BitbucketMigrationTool.Commands
         [Argument(0, nameof(Project), Description = "* Project key")]
         public string Project { get; set; }
 
-        [Argument(1, nameof(Project), Description = "* AAD id for the admin group")]
+        [Argument(1, nameof(AdminGroupId), Description = "* AAD id for the admin group")]
         public string AdminGroupId { get; set; }
 
-        [Argument(2, nameof(Project), Description = "* AAD id for the team group")]
+        [Argument(2, nameof(TeamGroupId), Description = "* AAD id for the team group")]
         public string TeamGroupId { get; set; }
 
         public AddToGroupCommand(ILogger<AddToGroupCommand> logger, IOptions<AppSettings> appSettingsOptions, AZDevopsClient devopsClient, AzDoGraphClient azDoGraphClient)
